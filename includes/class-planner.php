@@ -181,6 +181,12 @@ Rules:
    `image_url` slot and pass the captured URL through verbatim. Put the alt
    text in `image_alt` if the fragment has one. Do NOT invent image URLs;
    only use URLs that appear in the reference.
+8. Brand signals: when the brief contains a "Brand signals" block, use them
+   as soft hints. Refer to the product by `site_name` in headings/CTAs.
+   If `logo_url` is present and you're picking a logos fragment, you may use
+   it as one of the logo slots. The `theme_color` and `fonts` fields are
+   informational — current fragments don't expose color/font slots, so
+   don't try to set them.
 
 Output a JSON plan that conforms to the provided schema. Do not include any
 prose outside the JSON.
