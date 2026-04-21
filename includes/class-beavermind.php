@@ -73,6 +73,14 @@ final class Plugin {
 		require_once BEAVERMIND_DIR . 'includes/class-figma-fetcher.php';
 		require_once BEAVERMIND_DIR . 'includes/class-figma-generator.php';
 		( new FigmaGenerator( $this->planner, $this->writer, $this->fragments ) )->register();
+
+		require_once BEAVERMIND_DIR . 'includes/class-multipage-generator.php';
+		( new MultipageGenerator(
+			$this->planner,
+			$this->writer,
+			$this->fragments,
+			new SiteCloner()
+		) )->register();
 	}
 
 	private function load_dependencies(): void {
