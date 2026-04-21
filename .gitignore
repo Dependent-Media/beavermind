@@ -21,3 +21,10 @@ tests/playwright/.auth/
 
 # Logs
 *.log
+
+# Xcode (TestRunner macOS app lives at _TestRunner/)
+_TestRunner/.build/
+_TestRunner/**/xcuserdata/
+_TestRunner/**/DerivedData/
+_TestRunner/**/*.xcuserstate
+_TestRunner/**/xcschemes/xcschememanagement.plist
