@@ -31,10 +31,12 @@ class InlineFragments {
 	 */
 	private static function all_fragments(): array {
 		return array(
-			'hero-centered'    => self::hero_centered(),
-			'feature-grid-3col' => self::feature_grid_3col(),
-			'cta-banner'       => self::cta_banner(),
-			'two-col-content'  => self::two_col_content(),
+			'hero-centered'       => self::hero_centered(),
+			'hero-with-image'     => self::hero_with_image(),
+			'feature-grid-3col'   => self::feature_grid_3col(),
+			'image-text-split'    => self::image_text_split(),
+			'cta-banner'          => self::cta_banner(),
+			'two-col-content'     => self::two_col_content(),
 		);
 	}
 
@@ -86,6 +88,122 @@ class InlineFragments {
 				'subhead'   => array( 'node' => $body,   'field' => 'text' ),
 				'cta_label' => array( 'node' => $button, 'field' => 'text' ),
 				'cta_url'   => array( 'node' => $button, 'field' => 'link' ),
+			),
+		);
+
+		return array( 'meta' => $meta, 'nodes' => $nodes );
+	}
+
+	private static function hero_with_image(): array {
+		$row    = 'bm-heroimg-row';
+		$grp    = 'bm-heroimg-grp';
+		$col_l  = 'bm-heroimg-coll';
+		$col_r  = 'bm-heroimg-colr';
+		$head   = 'bm-heroimg-head';
+		$body   = 'bm-heroimg-body';
+		$button = 'bm-heroimg-btn';
+		$photo  = 'bm-heroimg-photo';
+
+		$nodes = array(
+			$row    => self::row_node( $row, null, 0, array(
+				'width'          => 'fixed',
+				'content_width'  => 'fixed',
+				'padding_top'    => 80,
+				'padding_bottom' => 80,
+				'padding_left'   => 20,
+				'padding_right'  => 20,
+			) ),
+			$grp    => self::group_node( $grp, $row, 0 ),
+			$col_l  => self::col_node( $col_l, $grp, 0, array( 'size' => 55, 'content_alignment' => 'left' ) ),
+			$head   => self::module_node( $head, $col_l, 0, 'heading', array(
+				'heading' => 'Placeholder Headline',
+				'tag'     => 'h1',
+			) ),
+			$body   => self::module_node( $body, $col_l, 1, 'rich-text', array(
+				'text' => '<p>Placeholder subhead copy — one sentence that sharpens the headline.</p>',
+			) ),
+			$button => self::module_node( $button, $col_l, 2, 'button', array(
+				'text'  => 'Placeholder CTA',
+				'link'  => '#',
+				'align' => 'left',
+				'style' => 'flat',
+			) ),
+			$col_r  => self::col_node( $col_r, $grp, 1, array( 'size' => 45 ) ),
+			$photo  => self::module_node( $photo, $col_r, 0, 'photo', array(
+				// URL mode: BB reads photo_url and ignores the attachment-ID `photo` field.
+				'photo_source' => 'url',
+				'photo_url'    => 'https://via.placeholder.com/600x480?text=Hero+image',
+				'url_title'    => 'Hero image',
+				'align'        => 'center',
+				'crop'         => '',
+				'link_type'    => '',
+			) ),
+		);
+
+		$meta = array(
+			'name'        => 'Hero with Image (right)',
+			'category'    => 'hero',
+			'description' => 'Two-column hero: headline + subhead + CTA on the left, hero image on the right. Use when the reference site has a prominent product shot or screenshot.',
+			'slots'       => array(
+				'headline'   => array( 'node' => $head,   'field' => 'heading' ),
+				'subhead'    => array( 'node' => $body,   'field' => 'text' ),
+				'cta_label'  => array( 'node' => $button, 'field' => 'text' ),
+				'cta_url'    => array( 'node' => $button, 'field' => 'link' ),
+				'image_url'  => array( 'node' => $photo,  'field' => 'photo_url' ),
+				'image_alt'  => array( 'node' => $photo,  'field' => 'url_title' ),
+			),
+		);
+
+		return array( 'meta' => $meta, 'nodes' => $nodes );
+	}
+
+	private static function image_text_split(): array {
+		$row    = 'bm-imgtxt-row';
+		$grp    = 'bm-imgtxt-grp';
+		$col_l  = 'bm-imgtxt-coll';
+		$col_r  = 'bm-imgtxt-colr';
+		$photo  = 'bm-imgtxt-photo';
+		$head   = 'bm-imgtxt-head';
+		$body   = 'bm-imgtxt-body';
+
+		$nodes = array(
+			$row    => self::row_node( $row, null, 0, array(
+				'width'          => 'fixed',
+				'content_width'  => 'fixed',
+				'padding_top'    => 60,
+				'padding_bottom' => 60,
+				'padding_left'   => 20,
+				'padding_right'  => 20,
+			) ),
+			$grp    => self::group_node( $grp, $row, 0 ),
+			$col_l  => self::col_node( $col_l, $grp, 0, array( 'size' => 50 ) ),
+			$photo  => self::module_node( $photo, $col_l, 0, 'photo', array(
+				'photo_source' => 'url',
+				'photo_url'    => 'https://via.placeholder.com/540x420?text=Feature+image',
+				'url_title'    => 'Feature image',
+				'align'        => 'center',
+				'crop'         => '',
+				'link_type'    => '',
+			) ),
+			$col_r  => self::col_node( $col_r, $grp, 1, array( 'size' => 50, 'content_alignment' => 'left' ) ),
+			$head   => self::module_node( $head, $col_r, 0, 'heading', array(
+				'heading' => 'Feature Heading',
+				'tag'     => 'h3',
+			) ),
+			$body   => self::module_node( $body, $col_r, 1, 'rich-text', array(
+				'text' => '<p>Feature body — describe what it does, for whom, and why it matters.</p>',
+			) ),
+		);
+
+		$meta = array(
+			'name'        => 'Image + Text Split',
+			'category'    => 'content',
+			'description' => 'Two-column block with an image on the left and a heading + body paragraph on the right. Use to explain a feature that benefits from a screenshot or diagram.',
+			'slots'       => array(
+				'image_url'  => array( 'node' => $photo, 'field' => 'photo_url' ),
+				'image_alt'  => array( 'node' => $photo, 'field' => 'url_title' ),
+				'heading'    => array( 'node' => $head,  'field' => 'heading' ),
+				'body'       => array( 'node' => $body,  'field' => 'text' ),
 			),
 		);
 
