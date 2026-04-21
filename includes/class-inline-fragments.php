@@ -93,6 +93,11 @@ class InlineFragments {
 				'cta_label' => array( 'node' => $button, 'field' => 'text' ),
 				'cta_url'   => array( 'node' => $button, 'field' => 'link' ),
 			),
+			'theme_bindings' => array(
+				'primary' => array(
+					array( 'node' => $button, 'field' => 'bg_color' ),
+				),
+			),
 		);
 
 		return array( 'meta' => $meta, 'nodes' => $nodes );
@@ -155,6 +160,11 @@ class InlineFragments {
 				'cta_url'    => array( 'node' => $button, 'field' => 'link' ),
 				'image_url'  => array( 'node' => $photo,  'field' => 'photo_url' ),
 				'image_alt'  => array( 'node' => $photo,  'field' => 'url_title' ),
+			),
+			'theme_bindings' => array(
+				'primary' => array(
+					array( 'node' => $button, 'field' => 'bg_color' ),
+				),
 			),
 		);
 
@@ -320,6 +330,11 @@ class InlineFragments {
 				'quote'       => array( 'node' => $quote, 'field' => 'heading' ),
 				'attribution' => array( 'node' => $attr,  'field' => 'text' ),
 			),
+			'theme_bindings' => array(
+				'bg_light' => array(
+					array( 'node' => $row, 'field' => 'bg_color' ),
+				),
+			),
 		);
 
 		return array( 'meta' => $meta, 'nodes' => $nodes );
@@ -425,6 +440,11 @@ class InlineFragments {
 			'category'    => 'social-proof',
 			'description' => 'Horizontal row of 5 customer or partner logos with an intro line. Only use this fragment when the reference site actually shows logos — do not invent them.',
 			'slots'       => $slots,
+			'theme_bindings' => array(
+				'bg_light' => array(
+					array( 'node' => $row, 'field' => 'bg_color' ),
+				),
+			),
 		);
 
 		return array( 'meta' => $meta, 'nodes' => $nodes );
@@ -537,6 +557,18 @@ class InlineFragments {
 				'subhead'   => array( 'node' => $body,   'field' => 'text' ),
 				'cta_label' => array( 'node' => $button, 'field' => 'text' ),
 				'cta_url'   => array( 'node' => $button, 'field' => 'link' ),
+			),
+			'theme_bindings' => array(
+				'bg_dark' => array(
+					array( 'node' => $row, 'field' => 'bg_color' ),
+				),
+				'text_on_dark' => array(
+					array( 'node' => $head,   'field' => 'color' ),
+					array( 'node' => $button, 'field' => 'bg_color' ),
+				),
+				'primary' => array(
+					array( 'node' => $button, 'field' => 'text_color' ),
+				),
 			),
 		);
 

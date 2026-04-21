@@ -335,9 +335,14 @@ class Planner {
 			);
 		}
 
+		// Pass through Claude's optional theme so LayoutWriter can apply it.
+		// Theme schema is a flat dict of { colors: { primary, bg_dark, ... } }.
+		$theme = isset( $decoded['theme'] ) && is_array( $decoded['theme'] ) ? $decoded['theme'] : null;
+
 		return array(
 			'page'      => $page,
 			'fragments' => $fragments_out,
+			'theme'     => $theme,
 			'usage'     => isset( $response->usage ) ? array(
 				'input_tokens'                => $response->usage->inputTokens ?? null,
 				'output_tokens'               => $response->usage->outputTokens ?? null,
@@ -374,9 +379,22 @@ Rules:
 8. Brand signals: when the brief contains a "Brand signals" block, use them
    as soft hints. Refer to the product by `site_name` in headings/CTAs.
    If `logo_url` is present and you're picking a logos fragment, you may use
-   it as one of the logo slots. The `theme_color` and `fonts` fields are
-   informational — current fragments don't expose color/font slots, so
-   don't try to set them.
+   it as one of the logo slots.
+9. Theme colors: optionally include a `theme.colors` object in your output
+   to override the fragments' default colors. Keys (all optional):
+   - `primary`        — main brand color, used for CTA button backgrounds
+   - `bg_dark`        — dark section backgrounds (CTA banner)
+   - `bg_light`       — subtle/alternate-section backgrounds (testimonial,
+                        logos rows)
+   - `text_on_dark`   — heading/text color on dark sections
+   - `text_on_light`  — text color on light sections (rarely needed; defaults
+                        are fine)
+   Values must be 6-digit hex without leading `#` (e.g. "2563eb"). Derive
+   `primary` from the brand's `theme_color` when present. Pick `bg_dark`
+   either from a darker shade of `primary` or as a neutral dark like
+   "111827"/"1f2937". `text_on_dark` should be near-white ("ffffff" or
+   "f9fafb"). Skip the whole `theme` block if you have no signal — defaults
+   are fine.
 
 Output a JSON plan that conforms to the provided schema. Do not include any
 prose outside the JSON.
@@ -409,6 +427,13 @@ PROMPT;
 	 * "object whose keys depend on a sibling enum field".
 	 */
 	private function plan_schema( array $fragment_ids ): array {
+		// Hex color hint — pattern constraint is dropped because structured
+		// outputs treat it as unsupported. LayoutWriter::normalize_color
+		// strips the leading # and validates 3 / 6-digit hex.
+		$hex = array(
+			'type'        => 'string',
+			'description' => '6-digit hex without leading # (e.g. "2563eb"). Leading # is tolerated.',
+		);
 		return array(
 			'type'                 => 'object',
 			'additionalProperties' => false,
@@ -417,6 +442,24 @@ PROMPT;
 				'title' => array(
 					'type'        => 'string',
 					'description' => 'HTML <title> for the generated page (under 60 chars).',
+				),
+				'theme' => array(
+					'type'                 => 'object',
+					'additionalProperties' => false,
+					'description'          => 'Optional color overrides. Omit when no brand signal is available — fragment defaults are sane.',
+					'properties'           => array(
+						'colors' => array(
+							'type'                 => 'object',
+							'additionalProperties' => false,
+							'properties'           => array(
+								'primary'       => $hex,
+								'bg_dark'       => $hex,
+								'bg_light'      => $hex,
+								'text_on_dark'  => $hex,
+								'text_on_light' => $hex,
+							),
+						),
+					),
 				),
 				'fragments' => array(
 					'type'  => 'array',
