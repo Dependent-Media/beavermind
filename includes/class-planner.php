@@ -176,6 +176,11 @@ Rules:
    Button labels: 1-3 words, action-first ("Get Started", not "Click Here").
 6. Page title (top of your output) is the HTML <title>, not a heading. Keep it
    under 60 chars.
+7. Images: if the reference includes an image in a section (look for
+   `![alt](url)` in the brief), prefer a fragment variant that has an
+   `image_url` slot and pass the captured URL through verbatim. Put the alt
+   text in `image_alt` if the fragment has one. Do NOT invent image URLs;
+   only use URLs that appear in the reference.
 
 Output a JSON plan that conforms to the provided schema. Do not include any
 prose outside the JSON.

@@ -169,14 +169,17 @@ class SiteCloner {
 				$lines[] = '- CTA: "' . $cta['text'] . '" -> ' . $cta['href'];
 			}
 			if ( ! empty( $section['images'] ) ) {
-				$alts = array();
-				foreach ( $section['images'] as $img ) {
-					if ( ! empty( $img['alt'] ) ) {
-						$alts[] = $img['alt'];
+				// Emit as markdown image syntax so Claude can lift the URL into
+				// `image_url` slots on image-aware fragments. Cap at 5 per section.
+				$seen = array();
+				foreach ( array_slice( $section['images'], 0, 5 ) as $img ) {
+					$url = (string) ( $img['src'] ?? '' );
+					if ( '' === $url || isset( $seen[ $url ] ) ) {
+						continue;
 					}
-				}
-				if ( $alts ) {
-					$lines[] = '_Images:_ ' . implode( '; ', array_slice( $alts, 0, 5 ) );
+					$seen[ $url ] = true;
+					$alt = trim( (string) ( $img['alt'] ?? '' ) );
+					$lines[] = '![' . $alt . '](' . $url . ')';
 				}
 			}
 			$lines[] = '';
