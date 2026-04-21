@@ -20,6 +20,13 @@ if ( ! defined( 'ABSPATH' ) ) {
  *     'final_url'   => string,          // after redirects
  *     'title'       => string,
  *     'description' => string,          // meta description
+ *     'brand'       => [
+ *       'site_name'   => string,        // og:site_name | document title head
+ *       'theme_color' => string|null,   // hex from <meta name="theme-color">
+ *       'logo_url'    => string|null,   // best-guess logo image
+ *       'og_image'    => string|null,   // og:image
+ *       'fonts'       => [string, ...], // family names from Google Fonts links
+ *     ],
  *     'sections'    => [
  *       [
  *         'heading'    => string,       // h1/h2/h3 text
@@ -94,7 +101,11 @@ class SiteCloner {
 		$dom->loadHTML( $prefixed, LIBXML_NOERROR | LIBXML_NOWARNING );
 		libxml_clear_errors();
 
-		// Remove irrelevant nodes before extraction.
+		// Extract brand signals BEFORE stripping nodes — header/nav often
+		// contain the logo, and <link>/<meta> tags carry font + color hints.
+		$brand = $this->extract_brand( $dom, $final_url );
+
+		// Now remove irrelevant nodes for content extraction.
 		foreach ( array( 'script', 'style', 'noscript', 'svg', 'iframe', 'nav', 'footer', 'header', 'form' ) as $tag ) {
 			$nodes = iterator_to_array( $dom->getElementsByTagName( $tag ) );
 			foreach ( $nodes as $n ) {
@@ -137,13 +148,120 @@ class SiteCloner {
 		// Trim noise: drop sections with nothing useful.
 		$sections = array_values( array_filter( $sections, array( $this, 'section_has_content' ) ) );
 
+		// Use the document title as a fallback for site_name when og:site_name
+		// is missing. Strip the leading product name out of common patterns
+		// like "Product — Tagline".
+		if ( '' === $brand['site_name'] && '' !== $title ) {
+			$brand['site_name'] = preg_split( '/\s+[—–|-]\s+/u', $title )[0] ?? $title;
+		}
+
 		return array(
 			'url'         => $url,
 			'final_url'   => $final_url,
 			'title'       => $title,
 			'description' => $description,
+			'brand'       => $brand,
 			'sections'    => $sections,
 		);
+	}
+
+	/**
+	 * Sniff brand signals from <meta>, <link>, and likely-logo <img> elements.
+	 * All values are best-effort — Claude treats them as hints, not requirements.
+	 *
+	 * @return array{site_name:string, theme_color:?string, logo_url:?string, og_image:?string, fonts:array<int,string>}
+	 */
+	private function extract_brand( \DOMDocument $dom, string $base_url ): array {
+		$brand = array(
+			'site_name'   => '',
+			'theme_color' => null,
+			'logo_url'    => null,
+			'og_image'    => null,
+			'fonts'       => array(),
+		);
+
+		// Meta tags: theme-color, og:site_name, og:image.
+		foreach ( $dom->getElementsByTagName( 'meta' ) as $meta ) {
+			$name    = strtolower( (string) $meta->getAttribute( 'name' ) );
+			$prop    = strtolower( (string) $meta->getAttribute( 'property' ) );
+			$content = trim( (string) $meta->getAttribute( 'content' ) );
+			if ( '' === $content ) {
+				continue;
+			}
+			if ( 'theme-color' === $name && null === $brand['theme_color'] ) {
+				$brand['theme_color'] = $this->normalize_color( $content );
+			} elseif ( 'og:site_name' === $prop && '' === $brand['site_name'] ) {
+				$brand['site_name'] = $content;
+			} elseif ( 'og:image' === $prop && null === $brand['og_image'] ) {
+				$brand['og_image'] = $this->absolutize( $content, $base_url );
+			}
+		}
+
+		// Google Fonts links: parse family names out of fonts.googleapis.com hrefs.
+		foreach ( $dom->getElementsByTagName( 'link' ) as $link ) {
+			$href = (string) $link->getAttribute( 'href' );
+			if ( false === stripos( $href, 'fonts.googleapis.com' ) ) {
+				continue;
+			}
+			// css?family=Inter:wght@400;700&family=Lora -> [Inter, Lora]
+			// css2?family=Inter:wght@400..700&display=swap                                -> [Inter]
+			$query = wp_parse_url( $href, PHP_URL_QUERY ) ?: '';
+			parse_str( $query, $args );
+			$family_param = $args['family'] ?? '';
+			if ( '' === $family_param ) {
+				continue;
+			}
+			// Multiple families repeat the `family=` key — parse_str only keeps the
+			// last. Re-parse the raw query for all values.
+			preg_match_all( '/(?:^|&)family=([^&]+)/', $query, $matches );
+			foreach ( $matches[1] as $raw_family ) {
+				$decoded = urldecode( $raw_family );
+				$family  = trim( explode( ':', $decoded )[0] );
+				$family  = str_replace( '+', ' ', $family );
+				if ( '' !== $family && ! in_array( $family, $brand['fonts'], true ) ) {
+					$brand['fonts'][] = $family;
+				}
+			}
+		}
+
+		// Logo: <img> with "logo" in src/alt/class. Score candidates and pick the best.
+		$best_score = 0;
+		foreach ( $dom->getElementsByTagName( 'img' ) as $img ) {
+			$src   = (string) $img->getAttribute( 'src' );
+			$alt   = strtolower( (string) $img->getAttribute( 'alt' ) );
+			$class = strtolower( (string) $img->getAttribute( 'class' ) );
+			if ( '' === $src ) {
+				continue;
+			}
+			$score = 0;
+			if ( str_contains( strtolower( $src ), 'logo' ) ) { $score += 3; }
+			if ( str_contains( $alt, 'logo' ) )                { $score += 2; }
+			if ( str_contains( $class, 'logo' ) )              { $score += 2; }
+			// Prefer SVG/PNG over photo formats (logos are rarely JPEG).
+			if ( preg_match( '/\.(svg|png)(\?|$)/i', $src ) )  { $score += 1; }
+			if ( $score > $best_score ) {
+				$best_score = $score;
+				$brand['logo_url'] = $this->absolutize( $src, $base_url );
+			}
+		}
+
+		return $brand;
+	}
+
+	/**
+	 * Normalize a CSS color value to a 6-digit hex without leading #.
+	 * Returns null if we can't recognize it (e.g. rgb(), hsl(), keywords).
+	 */
+	private function normalize_color( string $value ): ?string {
+		$value = trim( $value );
+		if ( preg_match( '/^#?([0-9a-f]{6})$/i', $value, $m ) ) {
+			return strtolower( $m[1] );
+		}
+		if ( preg_match( '/^#?([0-9a-f]{3})$/i', $value, $m ) ) {
+			$short = strtolower( $m[1] );
+			return $short[0] . $short[0] . $short[1] . $short[1] . $short[2] . $short[2];
+		}
+		return null;
 	}
 
 	/**
@@ -157,6 +275,33 @@ class SiteCloner {
 		}
 		if ( ! empty( $extracted['description'] ) ) {
 			$lines[] = '> ' . $extracted['description'];
+			$lines[] = '';
+		}
+
+		// Brand block — only emit fields we actually found. Claude uses these
+		// as soft hints (e.g. site_name in copy, logo_url in a logos slot).
+		$brand = (array) ( $extracted['brand'] ?? array() );
+		$brand_lines = array();
+		if ( ! empty( $brand['site_name'] ) ) {
+			$brand_lines[] = '- site_name: ' . $brand['site_name'];
+		}
+		if ( ! empty( $brand['theme_color'] ) ) {
+			$brand_lines[] = '- theme_color: #' . $brand['theme_color'];
+		}
+		if ( ! empty( $brand['logo_url'] ) ) {
+			$brand_lines[] = '- logo_url: ' . $brand['logo_url'];
+		}
+		if ( ! empty( $brand['og_image'] ) ) {
+			$brand_lines[] = '- og_image: ' . $brand['og_image'];
+		}
+		if ( ! empty( $brand['fonts'] ) ) {
+			$brand_lines[] = '- fonts: ' . implode( ', ', $brand['fonts'] );
+		}
+		if ( $brand_lines ) {
+			$lines[] = '## Brand signals';
+			foreach ( $brand_lines as $bl ) {
+				$lines[] = $bl;
+			}
 			$lines[] = '';
 		}
 		foreach ( (array) ( $extracted['sections'] ?? array() ) as $section ) {
