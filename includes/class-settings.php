@@ -82,6 +82,66 @@ class Settings {
 			self::MENU_SLUG,
 			'beavermind_integrations'
 		);
+
+		add_settings_field(
+			'staging_url',
+			__( 'Staging site URL', 'beavermind' ),
+			array( $this, 'render_staging_url_field' ),
+			self::MENU_SLUG,
+			'beavermind_integrations'
+		);
+
+		add_settings_field(
+			'staging_username',
+			__( 'Staging username', 'beavermind' ),
+			array( $this, 'render_staging_username_field' ),
+			self::MENU_SLUG,
+			'beavermind_integrations'
+		);
+
+		add_settings_field(
+			'staging_app_password',
+			__( 'Staging Application Password', 'beavermind' ),
+			array( $this, 'render_staging_app_password_field' ),
+			self::MENU_SLUG,
+			'beavermind_integrations'
+		);
+	}
+
+	public function render_staging_url_field(): void {
+		$value = (string) Plugin::instance()->get_option( 'staging_url', '' );
+		printf(
+			'<input type="url" id="beavermind_staging_url" name="%s[staging_url]" value="%s" class="regular-text" placeholder="https://staging.example.com" />',
+			esc_attr( Plugin::OPTION_KEY ),
+			esc_attr( $value )
+		);
+		echo '<p class="description">' . esc_html__( 'Receiving site\'s URL (no trailing slash). BeaverMind must be installed and active there.', 'beavermind' ) . '</p>';
+	}
+
+	public function render_staging_username_field(): void {
+		$value = (string) Plugin::instance()->get_option( 'staging_username', '' );
+		printf(
+			'<input type="text" id="beavermind_staging_username" name="%s[staging_username]" value="%s" class="regular-text" autocomplete="off" />',
+			esc_attr( Plugin::OPTION_KEY ),
+			esc_attr( $value )
+		);
+		echo '<p class="description">' . esc_html__( 'Username on the staging site (the app password is bound to this user).', 'beavermind' ) . '</p>';
+	}
+
+	public function render_staging_app_password_field(): void {
+		$value  = (string) Plugin::instance()->get_option( 'staging_app_password', '' );
+		$masked = $value ? str_repeat( '•', max( 0, strlen( $value ) - 4 ) ) . substr( $value, -4 ) : '';
+		printf(
+			'<input type="password" id="beavermind_staging_app_password" name="%s[staging_app_password]" value="%s" class="regular-text" autocomplete="off" placeholder="xxxx xxxx xxxx xxxx" />',
+			esc_attr( Plugin::OPTION_KEY ),
+			esc_attr( $value )
+		);
+		echo '<p class="description">';
+		if ( $masked ) {
+			echo esc_html( sprintf( __( 'Currently set: %s', 'beavermind' ), $masked ) ) . ' &middot; ';
+		}
+		esc_html_e( 'WP application password (Users → Profile → Application Passwords on the staging site). Spaces are tolerated.', 'beavermind' );
+		echo '</p>';
 	}
 
 	public function render_figma_token_field(): void {
@@ -112,8 +172,11 @@ class Settings {
 
 	public function sanitize( $input ): array {
 		$out = array();
-		$out['api_key']     = isset( $input['api_key'] ) ? trim( sanitize_text_field( $input['api_key'] ) ) : '';
-		$out['figma_token'] = isset( $input['figma_token'] ) ? trim( sanitize_text_field( $input['figma_token'] ) ) : '';
+		$out['api_key']              = isset( $input['api_key'] ) ? trim( sanitize_text_field( $input['api_key'] ) ) : '';
+		$out['figma_token']          = isset( $input['figma_token'] ) ? trim( sanitize_text_field( $input['figma_token'] ) ) : '';
+		$out['staging_url']          = isset( $input['staging_url'] ) ? esc_url_raw( $input['staging_url'] ) : '';
+		$out['staging_username']     = isset( $input['staging_username'] ) ? sanitize_user( $input['staging_username'] ) : '';
+		$out['staging_app_password'] = isset( $input['staging_app_password'] ) ? trim( sanitize_text_field( $input['staging_app_password'] ) ) : '';
 		$allowed_models = array( 'claude-opus-4-7', 'claude-sonnet-4-6', 'claude-haiku-4-5-20251001' );
 		$model = isset( $input['model'] ) ? sanitize_text_field( $input['model'] ) : 'claude-opus-4-7';
 		$out['model'] = in_array( $model, $allowed_models, true ) ? $model : 'claude-opus-4-7';
