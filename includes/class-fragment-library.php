@@ -8,45 +8,51 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Loads BeaverMind's curated fragment library.
  *
- * Two complementary sources:
- *   1. A .dat file at library/fragments.dat — the canonical, BB-native binary that
- *      ships fragments as saved templates. Registered via FLBuilder::register_templates().
- *   2. A JSON metadata index at library/fragments.json — what Claude sees when planning.
- *      Maps fragment_id -> { name, category, description, content_slots[] }.
+ * Two complementary sources, merged transparently:
  *
- * Until the .dat exists, fragments can also be defined inline via register_inline()
- * to bootstrap the test loop.
+ *   1. INLINE — registered at runtime via register_inline(), defined in PHP.
+ *      Used by InlineFragments for the bootstrap library; designers can also
+ *      hand-author here.
+ *   2. .DAT — library/*.dat files (PHP-serialized in BB's template format).
+ *      Each .dat entry's `name` is slugified into the fragment ID. Metadata
+ *      (slots, theme_bindings) lives in library/fragments.json keyed by
+ *      that ID. This is how designers extend the library: design a row in
+ *      the BB editor, export the saved template via Tools → Template Data
+ *      Exporter, drop the .dat in library/, write the metadata in
+ *      fragments.json.
+ *
+ * On ID collision, .dat fragments override inline ones — designers can
+ * supersede a built-in fragment without modifying our PHP.
+ *
+ * BB's FLBuilder::register_templates() registers .dat templates with BB's
+ * template panel; we DON'T rely on that path for our own lookups, because
+ * (a) it's slow (creates fl-builder-template posts), (b) it exposes our
+ * fragments in the BB UI which is noise. We unserialize the .dat directly
+ * and treat each entry as a portable node tree.
  */
 class FragmentLibrary {
 
-	private string $dat_path;
+	private string $library_dir;
 	private string $meta_path;
 
 	/** @var array<string, array> */
 	private array $inline_fragments = array();
 
+	/** @var array<string, array<string, \stdClass>>|null lazy: id => node array */
+	private ?array $dat_fragments_cache = null;
+
 	public function __construct() {
-		$this->dat_path  = BEAVERMIND_DIR . 'library/fragments.dat';
-		$this->meta_path = BEAVERMIND_DIR . 'library/fragments.json';
+		$this->library_dir = BEAVERMIND_DIR . 'library';
+		$this->meta_path   = $this->library_dir . '/fragments.json';
 	}
 
 	public function register(): void {
-		add_action( 'init', array( $this, 'register_dat' ), 20 );
-	}
-
-	public function register_dat(): void {
-		if ( ! file_exists( $this->dat_path ) ) {
-			return;
-		}
-		if ( ! class_exists( 'FLBuilder' ) || ! method_exists( 'FLBuilder', 'register_templates' ) ) {
-			return;
-		}
-		\FLBuilder::register_templates( $this->dat_path );
+		// No bootstrap hook needed — .dat loading is lazy. Method retained
+		// for back-compat with existing callers.
 	}
 
 	/**
-	 * Register a fragment defined as a raw node array (for bootstrap / test only).
-	 * Production fragments should live in fragments.dat.
+	 * Register a fragment defined as a raw node array (in-PHP).
 	 */
 	public function register_inline( string $id, array $meta, array $nodes ): void {
 		$this->inline_fragments[ $id ] = array(
@@ -68,15 +74,20 @@ class FragmentLibrary {
 			);
 		}
 
-		if ( file_exists( $this->meta_path ) ) {
-			$json = json_decode( (string) file_get_contents( $this->meta_path ), true );
-			if ( is_array( $json ) ) {
-				foreach ( $json as $id => $meta ) {
-					$catalog[ $id ] = array(
-						'meta'   => $meta,
-						'source' => 'dat',
-					);
-				}
+		// .dat-loaded entries override inline by ID. Metadata for them lives
+		// in fragments.json (slots + theme_bindings).
+		$dat = $this->dat_fragments();
+		if ( ! empty( $dat ) ) {
+			$json_meta = $this->json_metadata();
+			foreach ( $dat as $id => $_nodes ) {
+				$meta = $json_meta[ $id ] ?? array(
+					'name'     => $id,
+					'category' => 'uncategorized',
+				);
+				$catalog[ $id ] = array(
+					'meta'   => $meta,
+					'source' => 'dat',
+				);
 			}
 		}
 
@@ -84,28 +95,106 @@ class FragmentLibrary {
 	}
 
 	/**
-	 * Resolve a fragment ID to its raw node array (the data shape BB stores in
-	 * _fl_builder_data: associative array of stdClass nodes keyed by node ID).
+	 * Resolve a fragment ID to its raw node array.
 	 *
 	 * @return array<string, \stdClass>|null
 	 */
 	public function get_nodes( string $id ): ?array {
+		// .dat takes precedence on collision (matches catalog() behaviour).
+		$dat = $this->dat_fragments();
+		if ( isset( $dat[ $id ] ) ) {
+			return $dat[ $id ];
+		}
 		if ( isset( $this->inline_fragments[ $id ] ) ) {
 			return $this->inline_fragments[ $id ]['nodes'];
 		}
+		return null;
+	}
 
-		// Fragments shipped via .dat live in BB's saved-template post type after
-		// register_templates() has imported them. Look them up by template slug.
-		if ( ! class_exists( 'FLBuilderModel' ) ) {
-			return null;
+	/**
+	 * Unserialize every .dat in library/ and flatten into id => node-array.
+	 * Cached for the request.
+	 *
+	 * @return array<string, array<string, \stdClass>>
+	 */
+	private function dat_fragments(): array {
+		if ( null !== $this->dat_fragments_cache ) {
+			return $this->dat_fragments_cache;
 		}
-
-		$template_post = get_page_by_path( $id, OBJECT, 'fl-builder-template' );
-		if ( ! $template_post ) {
-			return null;
+		$out = array();
+		foreach ( glob( $this->library_dir . '/*.dat' ) ?: array() as $path ) {
+			$entries = self::read_dat_file( $path );
+			foreach ( $entries as $id => $nodes ) {
+				$out[ $id ] = $nodes;
+			}
 		}
+		$this->dat_fragments_cache = $out;
+		return $out;
+	}
 
-		$nodes = \FLBuilderModel::get_layout_data( 'published', $template_post->ID );
-		return is_array( $nodes ) ? $nodes : null;
+	/**
+	 * Read a single .dat file. Format: serialized array keyed by template type:
+	 *   ['layout' => [...], 'row' => [...], 'module' => [...]]
+	 * Each entry has {name, type, global, nodes, settings}. We treat each
+	 * entry's name as the fragment ID (slugified) and return id => nodes.
+	 *
+	 * @return array<string, array<string, \stdClass>>
+	 */
+	public static function read_dat_file( string $path ): array {
+		if ( ! is_readable( $path ) ) {
+			return array();
+		}
+		$raw = file_get_contents( $path );
+		if ( false === $raw ) {
+			return array();
+		}
+		$data = @unserialize( $raw );
+		if ( ! is_array( $data ) ) {
+			return array();
+		}
+		$out = array();
+		foreach ( array( 'layout', 'row', 'module' ) as $type ) {
+			$entries = (array) ( $data[ $type ] ?? array() );
+			foreach ( $entries as $entry ) {
+				if ( ! is_object( $entry ) ) {
+					continue;
+				}
+				$name = (string) ( $entry->name ?? '' );
+				if ( '' === $name ) {
+					continue;
+				}
+				$id = sanitize_title( $name );
+				if ( '' === $id ) {
+					continue;
+				}
+				$nodes = $entry->nodes ?? null;
+				// BB sometimes double-serializes nodes inside the cache to save
+				// memory — see FLBuilderModel::get_templates(). Detect and unwrap.
+				if ( is_string( $nodes ) ) {
+					$maybe = @unserialize( $nodes );
+					if ( is_array( $maybe ) ) {
+						$nodes = $maybe;
+					}
+				}
+				if ( ! is_array( $nodes ) ) {
+					continue;
+				}
+				$out[ $id ] = $nodes;
+			}
+		}
+		return $out;
+	}
+
+	/**
+	 * Read fragments.json metadata sidecar keyed by fragment ID.
+	 *
+	 * @return array<string, array>
+	 */
+	private function json_metadata(): array {
+		if ( ! file_exists( $this->meta_path ) ) {
+			return array();
+		}
+		$json = json_decode( (string) file_get_contents( $this->meta_path ), true );
+		return is_array( $json ) ? $json : array();
 	}
 }
