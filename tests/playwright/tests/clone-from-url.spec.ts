@@ -42,7 +42,11 @@ test.describe('BeaverMind clone-from-URL', () => {
       await page.getByTestId('bm-hint-input').fill(DESIGN_HINT);
       await page.getByTestId('bm-status-select').selectOption('publish');
       await page.screenshot({ path: 'test-results/02-form-filled.png', fullPage: true });
-      await page.getByTestId('bm-clone-submit').click();
+      // `noWaitAfter: true` because the submit triggers admin-post.php which
+      // calls Claude (10-40s) before redirecting back. The default click
+      // behaviour waits for navigation within actionTimeout (15s) and fails.
+      // We let the explicit waitForURL below handle the round-trip.
+      await page.getByTestId('bm-clone-submit').click({ noWaitAfter: true });
     });
 
     let postId = '';
