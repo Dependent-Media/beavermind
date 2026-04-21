@@ -69,6 +69,10 @@ final class Plugin {
 
 		require_once BEAVERMIND_DIR . 'includes/class-image-input-generator.php';
 		( new ImageInputGenerator( $this->planner, $this->writer, $this->fragments ) )->register();
+
+		require_once BEAVERMIND_DIR . 'includes/class-figma-fetcher.php';
+		require_once BEAVERMIND_DIR . 'includes/class-figma-generator.php';
+		( new FigmaGenerator( $this->planner, $this->writer, $this->fragments ) )->register();
 	}
 
 	private function load_dependencies(): void {

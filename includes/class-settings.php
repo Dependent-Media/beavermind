@@ -65,11 +65,55 @@ class Settings {
 			self::MENU_SLUG,
 			'beavermind_api'
 		);
+
+		add_settings_section(
+			'beavermind_integrations',
+			__( 'Integrations', 'beavermind' ),
+			function () {
+				echo '<p>' . esc_html__( 'Optional third-party credentials BeaverMind uses for additional input modalities.', 'beavermind' ) . '</p>';
+			},
+			self::MENU_SLUG
+		);
+
+		add_settings_field(
+			'figma_token',
+			__( 'Figma PAT', 'beavermind' ),
+			array( $this, 'render_figma_token_field' ),
+			self::MENU_SLUG,
+			'beavermind_integrations'
+		);
+	}
+
+	public function render_figma_token_field(): void {
+		$value  = (string) Plugin::instance()->get_option( 'figma_token', '' );
+		$masked = $value ? str_repeat( '•', max( 0, strlen( $value ) - 4 ) ) . substr( $value, -4 ) : '';
+		printf(
+			'<input type="password" id="beavermind_figma_token" name="%s[figma_token]" value="%s" class="regular-text" autocomplete="off" />',
+			esc_attr( Plugin::OPTION_KEY ),
+			esc_attr( $value )
+		);
+		$link = sprintf(
+			'<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>',
+			esc_url( 'https://www.figma.com/developers/api#access-tokens' ),
+			esc_html__( 'Figma personal access tokens', 'beavermind' )
+		);
+		if ( $masked ) {
+			echo '<p class="description">';
+			echo esc_html( sprintf( __( 'Currently set: %s', 'beavermind' ), $masked ) );
+			echo ' &middot; ';
+			printf( wp_kses_post( __( 'Manage tokens at %s. Needs file_read scope.', 'beavermind' ) ), $link );
+			echo '</p>';
+		} else {
+			echo '<p class="description">';
+			printf( wp_kses_post( __( 'Required for the From Figma input. Generate one at %s with file_read scope.', 'beavermind' ) ), $link );
+			echo '</p>';
+		}
 	}
 
 	public function sanitize( $input ): array {
 		$out = array();
-		$out['api_key'] = isset( $input['api_key'] ) ? trim( sanitize_text_field( $input['api_key'] ) ) : '';
+		$out['api_key']     = isset( $input['api_key'] ) ? trim( sanitize_text_field( $input['api_key'] ) ) : '';
+		$out['figma_token'] = isset( $input['figma_token'] ) ? trim( sanitize_text_field( $input['figma_token'] ) ) : '';
 		$allowed_models = array( 'claude-opus-4-7', 'claude-sonnet-4-6', 'claude-haiku-4-5-20251001' );
 		$model = isset( $input['model'] ) ? sanitize_text_field( $input['model'] ) : 'claude-opus-4-7';
 		$out['model'] = in_array( $model, $allowed_models, true ) ? $model : 'claude-opus-4-7';
