@@ -55,6 +55,9 @@ final class Plugin {
 			$this->fragments,
 			new SiteCloner()
 		) )->register();
+
+		require_once BEAVERMIND_DIR . 'includes/class-refine-generator.php';
+		( new RefineGenerator( $this->planner, $this->writer, $this->fragments ) )->register();
 	}
 
 	private function load_dependencies(): void {

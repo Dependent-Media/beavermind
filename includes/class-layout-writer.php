@@ -84,6 +84,15 @@ class LayoutWriter {
 		\FLBuilderModel::update_layout_settings( new \stdClass(), 'published', $post_id );
 		update_post_meta( $post_id, '_fl_builder_enabled', true );
 
+		// Persist the plan so the refine flow can re-open it later. Strip the
+		// usage block if present (set by Planner) — it's telemetry, not part
+		// of the plan shape Claude produces.
+		$plan_to_store = $plan;
+		unset( $plan_to_store['usage'] );
+		update_post_meta( $post_id, '_beavermind_plan', wp_json_encode( $plan_to_store ) );
+		update_post_meta( $post_id, '_beavermind_generated', 1 );
+		update_post_meta( $post_id, '_beavermind_generated_at', gmdate( 'c' ) );
+
 		return $post_id;
 	}
 
