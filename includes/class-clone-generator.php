@@ -186,12 +186,24 @@ class CloneGenerator {
 		$store['source_title']    = $ref['title'] ?? '';
 		$store['source_sections'] = count( (array) ( $ref['sections'] ?? array() ) );
 
-		// Step 2: plan with reference.
+		// Step 1b: opportunistically fetch the OG image so Claude gets BOTH
+		// the structural HTML and a visual anchor (hybrid URL+vision).
+		// Failures here are non-fatal — clone still works without an image.
+		$reference_image = array();
+		$og_image_url = (string) ( $ref['brand']['og_image'] ?? '' );
+		if ( '' !== $og_image_url ) {
+			$reference_image = $this->fetch_reference_image( $og_image_url );
+			if ( $reference_image ) {
+				$store['vision_image'] = $og_image_url;
+			}
+		}
+
+		// Step 2: plan with reference (and optional vision image).
 		$brief = '' !== $hint
 			? "Redesign this page using the BeaverMind fragment library. Design direction: $hint. Preserve the page's actual offering, headings, and CTAs, but rewrite copy to be sharper."
 			: "Redesign this page using the BeaverMind fragment library. Preserve the page's actual offering, headings, and CTAs, but rewrite copy to be sharper.";
 
-		$plan = $this->planner->plan( $brief, array( 'post_status' => $status ), $ref );
+		$plan = $this->planner->plan( $brief, array( 'post_status' => $status ), $ref, $reference_image );
 		if ( is_wp_error( $plan ) ) {
 			$store['error'] = 'Plan failed: ' . $plan->get_error_message();
 			$this->stash_and_redirect( $user_id, $store );
@@ -217,5 +229,46 @@ class CloneGenerator {
 		set_transient( self::TRANSIENT . $user_id, $store, 5 * MINUTE_IN_SECONDS );
 		wp_safe_redirect( admin_url( 'admin.php?page=' . self::SLUG ) );
 		exit;
+	}
+
+	/**
+	 * Best-effort fetch of an OG image (or any URL) for the vision pass.
+	 * Caps at ~3.5 MB to fit Anthropic's per-image limit; returns an empty
+	 * array on any failure so the caller falls back to text-only planning.
+	 *
+	 * @return array{bytes: string, media_type: string}|array{}
+	 */
+	private function fetch_reference_image( string $url ): array {
+		$resp = wp_remote_get( $url, array(
+			'timeout'    => 10,
+			'user-agent' => 'BeaverMind/0.1 (+https://dependentmedia.com/beavermind)',
+		) );
+		if ( is_wp_error( $resp ) ) {
+			return array();
+		}
+		$status = wp_remote_retrieve_response_code( $resp );
+		if ( $status < 200 || $status >= 300 ) {
+			return array();
+		}
+		$bytes = (string) wp_remote_retrieve_body( $resp );
+		if ( '' === $bytes || strlen( $bytes ) > 3_500_000 ) {
+			return array();
+		}
+		// Trust the response Content-Type, but only accept image types Claude
+		// supports. Sniff via finfo as a fallback.
+		$ctype = strtolower( (string) wp_remote_retrieve_header( $resp, 'content-type' ) );
+		$ctype = trim( explode( ';', $ctype )[0] );
+		$allowed = array( 'image/png', 'image/jpeg', 'image/webp', 'image/gif' );
+		if ( ! in_array( $ctype, $allowed, true ) ) {
+			if ( function_exists( 'finfo_open' ) ) {
+				$finfo = finfo_open( FILEINFO_MIME_TYPE );
+				$ctype = (string) finfo_buffer( $finfo, $bytes );
+				finfo_close( $finfo );
+			}
+		}
+		if ( ! in_array( $ctype, $allowed, true ) ) {
+			return array();
+		}
+		return array( 'bytes' => $bytes, 'media_type' => $ctype );
 	}
 }
