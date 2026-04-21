@@ -39,15 +39,20 @@ class Planner {
 	/**
 	 * Plan a page from a free-text brief.
 	 *
-	 * @param string $brief       Free-text description of the desired page.
-	 * @param array  $page_meta   Overrides for the page (title, post_status, etc.).
-	 * @param array  $reference   Optional extracted reference content from SiteCloner::fetch().
-	 *                            When present, the planner is told to preserve meaning
-	 *                            (content parity) while using our fragment palette.
+	 * @param string $brief            Free-text description of the desired page.
+	 * @param array  $page_meta        Overrides for the page (title, post_status, etc.).
+	 * @param array  $reference        Optional extracted reference content from SiteCloner::fetch().
+	 *                                 When present, the planner is told to preserve meaning
+	 *                                 (content parity) while using our fragment palette.
+	 * @param array  $reference_image  Optional ['bytes' => string, 'media_type' => string] —
+	 *                                 if provided, sent inline to Claude as a vision content
+	 *                                 block alongside the text reference. Use for hybrid
+	 *                                 URL+vision: extracted HTML for structure, the OG image
+	 *                                 (or any rendered screenshot) for visual feel.
 	 *
 	 * @return array|\WP_Error  Plan in LayoutWriter::apply_plan() shape, or WP_Error.
 	 */
-	public function plan( string $brief, array $page_meta = array(), array $reference = array() ) {
+	public function plan( string $brief, array $page_meta = array(), array $reference = array(), array $reference_image = array() ) {
 		if ( ! $this->claude->is_configured() ) {
 			return new \WP_Error( 'beavermind_no_key', 'Claude API key is not configured. Set it in BeaverMind settings.' );
 		}
@@ -57,11 +62,33 @@ class Planner {
 			return new \WP_Error( 'beavermind_no_fragments', 'No fragments are registered.' );
 		}
 
-		$user_content = 'Page brief:' . "\n\n" . $brief;
+		$user_text = 'Page brief:' . "\n\n" . $brief;
 		if ( $reference ) {
 			$cloner = new SiteCloner();
 			$ref_text = $cloner->render_for_prompt( $reference );
-			$user_content .= "\n\n---\n\nReference site (preserve the meaning and information — don't copy the wording, rewrite cleaner):\n\n" . $ref_text;
+			$user_text .= "\n\n---\n\nReference site (preserve the meaning and information — don't copy the wording, rewrite cleaner):\n\n" . $ref_text;
+		}
+
+		// Build the user message content. Plain string when no image is
+		// attached (slightly cheaper / simpler); content-block array when one
+		// is. The image goes BEFORE the text so Claude reads the visual
+		// context first, mirroring the recommended pattern in the docs.
+		$has_image = ! empty( $reference_image['bytes'] ) && ! empty( $reference_image['media_type'] );
+		if ( $has_image ) {
+			$user_text .= "\n\n---\n\nThe attached image is the reference's hero / OG image. Use it as a soft visual anchor — note dominant colors, mood, any product imagery — when picking fragments and writing copy. Don't try to perfectly reproduce it.";
+			$user_content = array(
+				array(
+					'type'   => 'image',
+					'source' => array(
+						'type'      => 'base64',
+						'media_type' => (string) $reference_image['media_type'],
+						'data'      => base64_encode( (string) $reference_image['bytes'] ),
+					),
+				),
+				array( 'type' => 'text', 'text' => $user_text ),
+			);
+		} else {
+			$user_content = $user_text;
 		}
 
 		try {
