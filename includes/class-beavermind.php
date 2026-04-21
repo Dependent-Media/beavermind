@@ -58,6 +58,14 @@ final class Plugin {
 
 		require_once BEAVERMIND_DIR . 'includes/class-refine-generator.php';
 		( new RefineGenerator( $this->planner, $this->writer, $this->fragments ) )->register();
+
+		require_once BEAVERMIND_DIR . 'includes/class-paste-html-generator.php';
+		( new PasteHTMLGenerator(
+			$this->planner,
+			$this->writer,
+			$this->fragments,
+			new SiteCloner()
+		) )->register();
 	}
 
 	private function load_dependencies(): void {
