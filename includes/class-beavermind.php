@@ -81,6 +81,12 @@ final class Plugin {
 			$this->fragments,
 			new SiteCloner()
 		) )->register();
+
+		require_once BEAVERMIND_DIR . 'includes/class-rest-api.php';
+		( new RestAPI( $this->writer, $this->fragments ) )->register();
+
+		require_once BEAVERMIND_DIR . 'includes/class-staging-pusher.php';
+		( new StagingPusher() )->register();
 	}
 
 	private function load_dependencies(): void {
