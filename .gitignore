@@ -22,6 +22,9 @@ tests/playwright/.auth/
 # Logs
 *.log
 
+# Release artifacts
+/dist/
+
 # Xcode (TestRunner macOS app lives at _TestRunner/)
 _TestRunner/.build/
 _TestRunner/**/xcuserdata/

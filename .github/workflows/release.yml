@@ -1,0 +1,75 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag to (re-)build, e.g. v0.2.0'
+        required: true
+        default: 'v0.0.0-dev'
+
+permissions:
+  contents: write   # needed for gh release create
+
+jobs:
+  package:
+    name: Build & publish plugin zip
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Resolve tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "name=${{ inputs.tag_name }}" >> "$GITHUB_OUTPUT"
+            echo "ref=${{ github.ref }}"      >> "$GITHUB_OUTPUT"
+          else
+            # tag push: github.ref is refs/tags/vX.Y.Z
+            tag="${GITHUB_REF#refs/tags/}"
+            echo "name=$tag" >> "$GITHUB_OUTPUT"
+            echo "ref=refs/tags/$tag" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.tag.outputs.ref }}
+
+      - name: Set up PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: composer:v2
+
+      - name: Install production deps
+        run: composer install --no-dev --no-interaction --no-progress --optimize-autoloader
+
+      - name: Build plugin zip
+        id: zip
+        run: |
+          bash bin/build-release-zip.sh "${{ steps.tag.outputs.name }}"
+          # build-release-zip.sh writes the path it produced to stdout's last line.
+          ZIP_PATH="dist/beavermind-${{ steps.tag.outputs.name }}.zip"
+          ls -la "$ZIP_PATH"
+          echo "path=$ZIP_PATH" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release (if tag push)
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ steps.tag.outputs.name }}" \
+            "${{ steps.zip.outputs.path }}" \
+            --title "${{ steps.tag.outputs.name }}" \
+            --generate-notes
+
+      - name: Upload zip as workflow artifact (manual dispatch)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: beavermind-${{ steps.tag.outputs.name }}
+          path: ${{ steps.zip.outputs.path }}
+          retention-days: 30
