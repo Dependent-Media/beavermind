@@ -64,11 +64,13 @@ class LayoutWriter {
 				continue;
 			}
 
-			$slots_meta = $catalog[ $id ]['meta']['slots'] ?? array();
+			$slots_meta     = $catalog[ $id ]['meta']['slots'] ?? array();
+			$theme_bindings = $catalog[ $id ]['meta']['theme_bindings'] ?? array();
 			$slot_overrides = isset( $entry['slots'] ) && is_array( $entry['slots'] ) ? $entry['slots'] : array();
 
 			[ $cloned, $id_map ] = $this->clone_nodes( $nodes );
 			$this->apply_slot_overrides( $cloned, $id_map, $slots_meta, $slot_overrides );
+			$this->apply_theme( $cloned, $id_map, $theme_bindings, (array) ( $plan['theme'] ?? array() ) );
 
 			// Append top-level rows in order to the merged layout.
 			foreach ( $cloned as $node_id => $node ) {
@@ -133,6 +135,71 @@ class LayoutWriter {
 			return \FLBuilderModel::generate_node_id();
 		}
 		return uniqid();
+	}
+
+	/**
+	 * Apply a theme to the cloned nodes by walking each fragment's
+	 * theme_bindings and patching the named settings fields.
+	 *
+	 * Theme is a flat dict like ['primary' => '2563eb', 'bg_dark' => '111827', ...].
+	 * Bindings are { theme_key => [ {node: old_id, field: settings_field, prefix?: '#' }, ... ] }.
+	 * If a binding's theme_key isn't present in the theme, that binding is
+	 * skipped — the fragment's hardcoded default stays.
+	 *
+	 * @param array<string, \stdClass> $cloned
+	 * @param array<string, string>    $id_map         old_id => new_id
+	 * @param array<string, array>     $theme_bindings binding map from fragment meta
+	 * @param array<string, mixed>     $theme          theme values (e.g. from plan['theme']['colors'])
+	 */
+	private function apply_theme( array &$cloned, array $id_map, array $theme_bindings, array $theme ): void {
+		if ( empty( $theme_bindings ) || empty( $theme ) ) {
+			return;
+		}
+		$colors = isset( $theme['colors'] ) && is_array( $theme['colors'] ) ? $theme['colors'] : array();
+		if ( empty( $colors ) ) {
+			return;
+		}
+		foreach ( $theme_bindings as $theme_key => $targets ) {
+			if ( ! isset( $colors[ $theme_key ] ) ) {
+				continue;
+			}
+			$value = $this->normalize_color( (string) $colors[ $theme_key ] );
+			if ( null === $value ) {
+				continue;
+			}
+			foreach ( (array) $targets as $target ) {
+				$old_id = $target['node']  ?? null;
+				$field  = $target['field'] ?? null;
+				if ( ! $old_id || ! $field || ! isset( $id_map[ $old_id ] ) ) {
+					continue;
+				}
+				$new_id = $id_map[ $old_id ];
+				if ( ! isset( $cloned[ $new_id ] ) ) {
+					continue;
+				}
+				$node = $cloned[ $new_id ];
+				if ( ! is_object( $node->settings ) ) {
+					$node->settings = new \stdClass();
+				}
+				$node->settings->{$field} = $value;
+			}
+		}
+	}
+
+	/**
+	 * Normalize a color hex (with or without leading #, 3 or 6 digits) to
+	 * BB's stored form: 6 lowercase hex digits, no #.
+	 */
+	private function normalize_color( string $value ): ?string {
+		$value = trim( $value );
+		if ( preg_match( '/^#?([0-9a-f]{6})$/i', $value, $m ) ) {
+			return strtolower( $m[1] );
+		}
+		if ( preg_match( '/^#?([0-9a-f]{3})$/i', $value, $m ) ) {
+			$short = strtolower( $m[1] );
+			return $short[0] . $short[0] . $short[1] . $short[1] . $short[2] . $short[2];
+		}
+		return null;
 	}
 
 	/**
