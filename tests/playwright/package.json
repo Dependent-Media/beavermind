@@ -1,0 +1,18 @@
+{
+  "name": "beavermind-playwright",
+  "version": "0.1.0",
+  "private": true,
+  "description": "E2E Playwright tests for the BeaverMind WordPress plugin.",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "report": "playwright show-report",
+    "install-browsers": "playwright install chromium"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "dotenv": "^16.4.5",
+    "typescript": "^5.5.0"
+  }
+}

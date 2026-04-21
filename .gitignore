@@ -1,0 +1,23 @@
+# macOS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+
+# Composer — we DO ship vendor/ (it's a distributable WP plugin) so don't ignore it.
+# But ignore dev-only caches.
+/.phpunit.result.cache
+
+# Playwright test project
+tests/playwright/node_modules/
+tests/playwright/test-results/
+tests/playwright/playwright-report/
+tests/playwright/playwright/.cache/
+
+# Local secrets / auth state — must never be committed
+tests/playwright/.env
+tests/playwright/.auth/
+
+# Logs
+*.log

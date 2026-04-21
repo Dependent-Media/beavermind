@@ -1,0 +1,294 @@
+<?php
+namespace BeaverMind;
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+/**
+ * Fetches a URL and extracts a structured summary of its content.
+ *
+ * Output is intentionally lossy: we strip scripts/styles, keep the semantic
+ * structure (title, headings, paragraphs, images, CTAs), and hand the result
+ * to Claude as the "reference" for a new page. We do NOT try to reproduce
+ * the source visually — BeaverMind is about redesigning with Beaver Builder
+ * fragments, not scraping and pasting.
+ *
+ * Output shape:
+ *   [
+ *     'url'         => string,
+ *     'final_url'   => string,          // after redirects
+ *     'title'       => string,
+ *     'description' => string,          // meta description
+ *     'sections'    => [
+ *       [
+ *         'heading'    => string,       // h1/h2/h3 text
+ *         'level'      => int,          // 1/2/3
+ *         'paragraphs' => [string, ...],
+ *         'images'     => [['src'=>..., 'alt'=>...], ...],
+ *         'ctas'       => [['text'=>..., 'href'=>...], ...],
+ *       ],
+ *       ...
+ *     ],
+ *   ]
+ */
+class SiteCloner {
+
+	const MAX_BODY_BYTES = 2_000_000; // 2 MB cap — avoid memory blowouts on huge pages
+
+	/**
+	 * Fetch a URL and extract structured content.
+	 *
+	 * @return array|\WP_Error
+	 */
+	public function fetch( string $url ) {
+		$url = trim( $url );
+		if ( '' === $url ) {
+			return new \WP_Error( 'beavermind_empty_url', 'URL is required.' );
+		}
+		if ( ! wp_http_validate_url( $url ) ) {
+			return new \WP_Error( 'beavermind_bad_url', 'That does not look like a valid URL.' );
+		}
+
+		$response = wp_remote_get( $url, array(
+			'timeout'     => 20,
+			'redirection' => 5,
+			'user-agent'  => 'BeaverMind/0.1 (+https://dependentmedia.com/beavermind)',
+			'headers'     => array(
+				'Accept'          => 'text/html,application/xhtml+xml',
+				'Accept-Language' => 'en-US,en;q=0.9',
+			),
+		) );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$status = wp_remote_retrieve_response_code( $response );
+		if ( $status < 200 || $status >= 400 ) {
+			return new \WP_Error( 'beavermind_fetch_failed', "Source returned HTTP $status." );
+		}
+
+		$body = wp_remote_retrieve_body( $response );
+		if ( strlen( $body ) > self::MAX_BODY_BYTES ) {
+			$body = substr( $body, 0, self::MAX_BODY_BYTES );
+		}
+
+		$final_url = $url;
+		$headers   = wp_remote_retrieve_headers( $response );
+		if ( isset( $headers['location'] ) ) {
+			$final_url = is_array( $headers['location'] ) ? end( $headers['location'] ) : $headers['location'];
+		}
+
+		return $this->extract( $body, $url, $final_url );
+	}
+
+	/**
+	 * Parse raw HTML into the structured shape. Exposed for testing.
+	 */
+	public function extract( string $html, string $url, string $final_url ): array {
+		libxml_use_internal_errors( true );
+		$dom = new \DOMDocument();
+		// Hint the parser about encoding and suppress warnings from malformed HTML.
+		$prefixed = '<?xml encoding="utf-8"?>' . $html;
+		$dom->loadHTML( $prefixed, LIBXML_NOERROR | LIBXML_NOWARNING );
+		libxml_clear_errors();
+
+		// Remove irrelevant nodes before extraction.
+		foreach ( array( 'script', 'style', 'noscript', 'svg', 'iframe', 'nav', 'footer', 'header', 'form' ) as $tag ) {
+			$nodes = iterator_to_array( $dom->getElementsByTagName( $tag ) );
+			foreach ( $nodes as $n ) {
+				$n->parentNode && $n->parentNode->removeChild( $n );
+			}
+		}
+
+		$title = '';
+		$title_tags = $dom->getElementsByTagName( 'title' );
+		if ( $title_tags->length ) {
+			$title = trim( (string) $title_tags->item( 0 )->textContent );
+		}
+
+		$description = '';
+		foreach ( $dom->getElementsByTagName( 'meta' ) as $meta ) {
+			$name = strtolower( (string) $meta->getAttribute( 'name' ) );
+			$prop = strtolower( (string) $meta->getAttribute( 'property' ) );
+			if ( 'description' === $name || 'og:description' === $prop ) {
+				$description = trim( (string) $meta->getAttribute( 'content' ) );
+				if ( '' !== $description ) {
+					break;
+				}
+			}
+		}
+
+		// Walk the body, accumulating sections keyed off h1/h2/h3.
+		$body = $dom->getElementsByTagName( 'body' )->item( 0 );
+		$sections = array();
+		$current  = $this->new_section( 'Introduction', 1 );
+
+		if ( $body ) {
+			$this->walk( $body, $sections, $current, $final_url );
+		}
+
+		// Flush the final section.
+		if ( $this->section_has_content( $current ) ) {
+			$sections[] = $current;
+		}
+
+		// Trim noise: drop sections with nothing useful.
+		$sections = array_values( array_filter( $sections, array( $this, 'section_has_content' ) ) );
+
+		return array(
+			'url'         => $url,
+			'final_url'   => $final_url,
+			'title'       => $title,
+			'description' => $description,
+			'sections'    => $sections,
+		);
+	}
+
+	/**
+	 * Render the extracted content as a compact markdown-ish string that
+	 * Claude can consume as context. Keeps token cost predictable.
+	 */
+	public function render_for_prompt( array $extracted, int $max_chars = 12000 ): string {
+		$lines = array();
+		if ( ! empty( $extracted['title'] ) ) {
+			$lines[] = '# ' . $extracted['title'];
+		}
+		if ( ! empty( $extracted['description'] ) ) {
+			$lines[] = '> ' . $extracted['description'];
+			$lines[] = '';
+		}
+		foreach ( (array) ( $extracted['sections'] ?? array() ) as $section ) {
+			$level = max( 1, min( 3, (int) ( $section['level'] ?? 2 ) ) );
+			$lines[] = str_repeat( '#', $level + 1 ) . ' ' . $section['heading'];
+			foreach ( (array) ( $section['paragraphs'] ?? array() ) as $p ) {
+				$lines[] = $p;
+			}
+			foreach ( (array) ( $section['ctas'] ?? array() ) as $cta ) {
+				$lines[] = '- CTA: "' . $cta['text'] . '" -> ' . $cta['href'];
+			}
+			if ( ! empty( $section['images'] ) ) {
+				$alts = array();
+				foreach ( $section['images'] as $img ) {
+					if ( ! empty( $img['alt'] ) ) {
+						$alts[] = $img['alt'];
+					}
+				}
+				if ( $alts ) {
+					$lines[] = '_Images:_ ' . implode( '; ', array_slice( $alts, 0, 5 ) );
+				}
+			}
+			$lines[] = '';
+		}
+
+		$out = implode( "\n", $lines );
+		if ( strlen( $out ) > $max_chars ) {
+			$out = substr( $out, 0, $max_chars ) . "\n\n…(truncated)";
+		}
+		return $out;
+	}
+
+	// ---------- internal helpers ----------
+
+	private function new_section( string $heading, int $level ): array {
+		return array(
+			'heading'    => $heading,
+			'level'      => $level,
+			'paragraphs' => array(),
+			'images'     => array(),
+			'ctas'       => array(),
+		);
+	}
+
+	private function section_has_content( array $section ): bool {
+		return ! empty( $section['paragraphs'] )
+			|| ! empty( $section['images'] )
+			|| ! empty( $section['ctas'] );
+	}
+
+	private function walk( \DOMNode $node, array &$sections, array &$current, string $base_url ): void {
+		if ( ! $node->hasChildNodes() ) {
+			return;
+		}
+		foreach ( $node->childNodes as $child ) {
+			if ( XML_ELEMENT_NODE !== $child->nodeType ) {
+				continue;
+			}
+			$tag = strtolower( $child->nodeName );
+
+			if ( in_array( $tag, array( 'h1', 'h2', 'h3' ), true ) ) {
+				if ( $this->section_has_content( $current ) ) {
+					$sections[] = $current;
+				}
+				$level = (int) substr( $tag, 1 );
+				$current = $this->new_section( $this->clean_text( $child->textContent ), $level );
+				continue;
+			}
+
+			if ( 'p' === $tag || 'li' === $tag ) {
+				$text = $this->clean_text( $child->textContent );
+				if ( $text && strlen( $text ) > 15 && count( $current['paragraphs'] ) < 8 ) {
+					$current['paragraphs'][] = $text;
+				}
+				continue;
+			}
+
+			if ( 'img' === $tag ) {
+				$src = (string) $child->getAttribute( 'src' );
+				$alt = (string) $child->getAttribute( 'alt' );
+				if ( $src ) {
+					$current['images'][] = array(
+						'src' => $this->absolutize( $src, $base_url ),
+						'alt' => $this->clean_text( $alt ),
+					);
+				}
+				continue;
+			}
+
+			if ( 'a' === $tag ) {
+				$href = (string) $child->getAttribute( 'href' );
+				$text = $this->clean_text( $child->textContent );
+				// Only keep anchors that look like CTAs: short text, external-ish href.
+				if ( $text && strlen( $text ) <= 40 && $href && '#' !== substr( $href, 0, 1 ) ) {
+					$current['ctas'][] = array(
+						'text' => $text,
+						'href' => $this->absolutize( $href, $base_url ),
+					);
+				}
+				// Still recurse in case there's a heading or paragraph inside the <a>.
+			}
+
+			$this->walk( $child, $sections, $current, $base_url );
+		}
+	}
+
+	private function clean_text( string $text ): string {
+		$text = html_entity_decode( $text, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+		$text = preg_replace( '/\s+/u', ' ', $text ) ?? $text;
+		return trim( $text );
+	}
+
+	private function absolutize( string $url, string $base ): string {
+		if ( '' === $url ) {
+			return $url;
+		}
+		if ( preg_match( '#^https?://#i', $url ) ) {
+			return $url;
+		}
+		$parts = wp_parse_url( $base );
+		if ( ! $parts || empty( $parts['host'] ) ) {
+			return $url;
+		}
+		$scheme = $parts['scheme'] ?? 'https';
+		$host   = $parts['host'];
+		if ( 0 === strpos( $url, '//' ) ) {
+			return $scheme . ':' . $url;
+		}
+		if ( 0 === strpos( $url, '/' ) ) {
+			return $scheme . '://' . $host . $url;
+		}
+		$path = isset( $parts['path'] ) ? dirname( $parts['path'] ) : '';
+		return $scheme . '://' . $host . rtrim( $path, '/' ) . '/' . $url;
+	}
+}

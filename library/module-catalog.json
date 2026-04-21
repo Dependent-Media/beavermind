@@ -1,0 +1,1163 @@
+{
+    "bb-core": {
+        "accordion": {
+            "name": "Accordion",
+            "category": "Layout",
+            "group": "",
+            "enabled": true
+        },
+        "audio": {
+            "name": "Audio",
+            "category": "Basic",
+            "group": "",
+            "enabled": true
+        },
+        "bigcommerce": {
+            "name": "BigCommerce Products",
+            "category": "BigCommerce",
+            "group": "",
+            "enabled": true
+        },
+        "box": {
+            "name": "Box",
+            "category": "Box",
+            "group": "",
+            "enabled": true
+        },
+        "button": {
+            "name": "Button",
+            "category": "Basic",
+            "group": "",
+            "enabled": true
+        },
+        "button-group": {
+            "name": "Button Group",
+            "category": "Basic",
+            "group": "",
+            "enabled": true
+        },
+        "callout": {
+            "name": "Callout",
+            "category": "Actions",
+            "group": "",
+            "enabled": true
+        },
+        "contact-form": {
+            "name": "Contact Form",
+            "category": "Actions",
+            "group": "",
+            "enabled": true
+        },
+        "content-slider": {
+            "name": "Content Slider",
+            "category": "Media",
+            "group": "",
+            "enabled": true
+        },
+        "countdown": {
+            "name": "Countdown",
+            "category": "Info",
+            "group": "",
+            "enabled": true
+        },
+        "cta": {
+            "name": "Call to Action",
+            "category": "Actions",
+            "group": "",
+            "enabled": true
+        },
+        "gallery": {
+            "name": "Gallery",
+            "category": "Media",
+            "group": "",
+            "enabled": true
+        },
+        "heading": {
+            "name": "Heading",
+            "category": "Basic",
+            "group": "",
+            "enabled": true
+        },
+        "html": {
+            "name": "HTML",
+            "category": "Basic",
+            "group": "",
+            "enabled": true
+        },
+        "icon": {
+            "name": "Icon",
+            "category": "Media",
+            "group": "",
+            "enabled": true
+        },
+        "icon-group": {
+            "name": "Icon Group",
+            "category": "Media",
+            "group": "",
+            "enabled": true
+        },
+        "list": {
+            "name": "List",
+            "category": "Basic",
+            "group": "",
+            "enabled": true
+        },
+        "login-form": {
+            "name": "Login Form",
+            "category": "Actions",
+            "group": "",
+            "enabled": true
+        },
+        "map": {
+            "name": "Map",
+            "category": "Media",
+            "group": "",
+            "enabled": true
+        },
+        "menu": {
+            "name": "Menu",
+            "category": "Actions",
+            "group": "",
+            "enabled": true
+        },
+        "north-commerce": {
+            "name": "North Commerce",
+            "category": "North Commerce",
+            "group": "",
+            "enabled": true
+        },
+        "numbers": {
+            "name": "Number Counter",
+            "category": "Info",
+            "group": "",
+            "enabled": true
+        },
+        "photo": {
+            "name": "Photo",
+            "category": "Basic",
+            "group": "",
+            "enabled": true
+        },
+        "post-carousel": {
+            "name": "Posts Carousel",
+            "category": "Posts",
+            "group": "",
+            "enabled": true
+        },
+        "post-grid": {
+            "name": "Posts",
+            "category": "Posts",
+            "group": "",
+            "enabled": true
+        },
+        "post-slider": {
+            "name": "Posts Slider",
+            "category": "Posts",
+            "group": "",
+            "enabled": true
+        },
+        "pricing-table": {
+            "name": "Pricing Table",
+            "category": "Layout",
+            "group": "",
+            "enabled": true
+        },
+        "reusable-block": {
+            "name": "WordPress Pattern",
+            "category": "WordPress Patterns",
+            "group": "WordPress Patterns",
+            "enabled": true
+        },
+        "rich-text": {
+            "name": "Text Editor",
+            "category": "Basic",
+            "group": "",
+            "enabled": true
+        },
+        "search": {
+            "name": "Search",
+            "category": "Actions",
+            "group": "",
+            "enabled": true
+        },
+        "separator": {
+            "name": "Separator",
+            "category": "Basic",
+            "group": "",
+            "enabled": true
+        },
+        "sidebar": {
+            "name": "Sidebar",
+            "category": "Layout",
+            "group": "",
+            "enabled": true
+        },
+        "slideshow": {
+            "name": "Slideshow",
+            "category": "Media",
+            "group": "",
+            "enabled": true
+        },
+        "social-buttons": {
+            "name": "Social Buttons",
+            "category": "Actions",
+            "group": "",
+            "enabled": true
+        },
+        "star-rating": {
+            "name": "Star Rating",
+            "category": "Media",
+            "group": "",
+            "enabled": true
+        },
+        "subscribe-form": {
+            "name": "Subscribe Form",
+            "category": "Actions",
+            "group": "",
+            "enabled": true
+        },
+        "tabs": {
+            "name": "Tabs",
+            "category": "Layout",
+            "group": "",
+            "enabled": true
+        },
+        "testimonials": {
+            "name": "Testimonials",
+            "category": "Media",
+            "group": "",
+            "enabled": true
+        },
+        "video": {
+            "name": "Video",
+            "category": "Basic",
+            "group": "",
+            "enabled": true
+        },
+        "widget": {
+            "name": "Widget",
+            "category": "WordPress Widgets",
+            "group": "WordPress Widgets",
+            "enabled": true
+        },
+        "woocommerce": {
+            "name": "WooCommerce",
+            "category": "WooCommerce",
+            "group": "",
+            "enabled": true
+        }
+    },
+    "uabb": {
+        "advanced-accordion": {
+            "name": "Advanced Accordion",
+            "category": "Content Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "advanced-icon": {
+            "name": "Advanced Icons",
+            "category": "Content Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "uabb-advanced-menu": {
+            "name": "Advanced Menu",
+            "category": "Creative Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "blog-posts": {
+            "name": "Advanced Posts",
+            "category": "Content Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "advanced-tabs": {
+            "name": "Advanced Tabs",
+            "category": "Content Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "uabb-timeline": {
+            "name": "Advanced Timeline",
+            "category": "Content Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "uabb-beforeafterslider": {
+            "name": "Before After Slider",
+            "category": "Extra Additions",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "uabb-business-hours": {
+            "name": "Business Hours",
+            "category": "Content Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "uabb-business-reviews": {
+            "name": "Business Reviews",
+            "category": "Content Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "uabb-call-to-action": {
+            "name": "Call to Action",
+            "category": "Lead Generation",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "uabb-contact-form": {
+            "name": "Contact Form",
+            "category": "Lead Generation",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "uabb-content-toggle": {
+            "name": "Content Toggle",
+            "category": "Content Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "uabb-countdown": {
+            "name": "Countdown",
+            "category": "Extra Additions",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "uabb-numbers": {
+            "name": "Counter",
+            "category": "Creative Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "creative-link": {
+            "name": "Creative Link",
+            "category": "Creative Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "uabb-devices": {
+            "name": "Devices",
+            "category": "Content Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "dual-button": {
+            "name": "Dual Button",
+            "category": "Creative Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "dual-color-heading": {
+            "name": "Dual Color Headings",
+            "category": "Creative Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "fancy-text": {
+            "name": "Fancy Text",
+            "category": "Creative Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "uabb-faq": {
+            "name": "FAQ Schema",
+            "category": "Content Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "flip-box": {
+            "name": "Flip Box",
+            "category": "Creative Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "google-map": {
+            "name": "Google Map",
+            "category": "Content Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "uabb-heading": {
+            "name": "Heading",
+            "category": "Content Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "uabb-hotspot": {
+            "name": "Hotspot",
+            "category": "Extra Additions",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "uabb-how-to": {
+            "name": "How-to Schema",
+            "category": "Content Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "ihover": {
+            "name": "iHover",
+            "category": "Creative Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "uabb-image-carousel": {
+            "name": "Image Carousel",
+            "category": "Extra Additions",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "image-separator": {
+            "name": "Image Separator",
+            "category": "Creative Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "info-banner": {
+            "name": "Info Banner",
+            "category": "Content Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "info-box": {
+            "name": "Info Box",
+            "category": "Content Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "info-circle": {
+            "name": "Info Circle",
+            "category": "Creative Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "info-list": {
+            "name": "Info List",
+            "category": "Content Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "info-table": {
+            "name": "Info Table",
+            "category": "Content Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "interactive-banner-1": {
+            "name": "Interactive Banner 1",
+            "category": "Content Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "interactive-banner-2": {
+            "name": "Interactive Banner 2",
+            "category": "Creative Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "list-icon": {
+            "name": "List Icon",
+            "category": "Content Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "uabb-login-form": {
+            "name": "Login Form",
+            "category": "Content Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "mailchimp-subscribe-form": {
+            "name": "Subscription Form",
+            "category": "Lead Generation",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "uabb-marketing-button": {
+            "name": "Marketing Button",
+            "category": "Content Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "modal-popup": {
+            "name": "Modal Popup",
+            "category": "Lead Generation",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "uabb-off-canvas": {
+            "name": "Off-Canvas",
+            "category": "Content Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "uabb-photo": {
+            "name": "Photo",
+            "category": "Content Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "photo-gallery": {
+            "name": "Photo Gallery",
+            "category": "Content Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "pricing-box": {
+            "name": "Price Box",
+            "category": "Content Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "uabb-price-list": {
+            "name": "Price List",
+            "category": "Content Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "progress-bar": {
+            "name": "Progress Bar",
+            "category": "Creative Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "uabb-retina-image": {
+            "name": "Retina Image",
+            "category": "Content Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "ribbon": {
+            "name": "Ribbon",
+            "category": "Lead Generation",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "uabb-search": {
+            "name": "Search",
+            "category": "Lead Generation",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "slide-box": {
+            "name": "Slide Box",
+            "category": "Creative Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "uabb-social-share": {
+            "name": "Social Share",
+            "category": "Extra Additions",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "spacer-gap": {
+            "name": "Spacer \/ Gap",
+            "category": "Extra Additions",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "uabb-star-rating": {
+            "name": "Star Rating",
+            "category": "Extra Additions",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "uabb-table": {
+            "name": "Table",
+            "category": "Content Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "uabb-table-of-contents": {
+            "name": "Table of Contents",
+            "category": "Content Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "team": {
+            "name": "Team",
+            "category": "Content Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "adv-testimonials": {
+            "name": "Testimonials",
+            "category": "Content Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "uabb-registration-form": {
+            "name": "User Registration Form",
+            "category": "Content Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "uabb-video": {
+            "name": "Video",
+            "category": "Content Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "uabb-video-gallery": {
+            "name": "Video  Gallery",
+            "category": "Content Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "advanced-separator": {
+            "name": "Advanced Separator",
+            "category": "Creative Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "uabb-button": {
+            "name": "Button",
+            "category": "Lead Generation",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "image-icon": {
+            "name": "Image \/ Icon",
+            "category": "Content Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "uabb-separator": {
+            "name": "Simple Separator",
+            "category": "Content Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        },
+        "uabb-svg-animator": {
+            "name": "SVG Animator",
+            "category": "Creative Modules",
+            "group": "UABB Modules",
+            "enabled": true
+        }
+    },
+    "powerpack": {
+        "fl-button": {
+            "name": "Button",
+            "category": "PowerPack Modules",
+            "group": "",
+            "enabled": true
+        },
+        "pp-3d-slider": {
+            "name": "3D Slider",
+            "category": "Media Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-advanced-accordion": {
+            "name": "Advanced Accordion",
+            "category": "Content Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-advanced-menu": {
+            "name": "Advanced Menu",
+            "category": "Content Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-advanced-tabs": {
+            "name": "Advanced Tabs",
+            "category": "Content Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-album": {
+            "name": "Album",
+            "category": "Media Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-animated-headlines": {
+            "name": "Animated Headlines",
+            "category": "Creative Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-announcement-bar": {
+            "name": "Announcement Bar",
+            "category": "Lead Generation Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-author-box": {
+            "name": "Author Box",
+            "category": "Content Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-breadcrumbs": {
+            "name": "Breadcrumbs",
+            "category": "Content Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-business-hours": {
+            "name": "Business Hours",
+            "category": "Content Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-card-slider": {
+            "name": "Card Slider",
+            "category": "Content Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-category-grid": {
+            "name": "Category Grid",
+            "category": "Content Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-column-separator": {
+            "name": "Column Separator",
+            "category": "Creative Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-contact-form": {
+            "name": "Contact Form",
+            "category": "Form Styler Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-content-grid": {
+            "name": "Content Grid",
+            "category": "Content Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-content-ticker": {
+            "name": "Content Ticker",
+            "category": "Content Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-content-tiles": {
+            "name": "Content Tiles",
+            "category": "Content Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-countdown": {
+            "name": "Countdown",
+            "category": "Creative Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-coupon": {
+            "name": "Coupon",
+            "category": "Content Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-custom-grid": {
+            "name": "Custom Grid",
+            "category": "Content Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-devices": {
+            "name": "Devices",
+            "category": "Media Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-dotnav": {
+            "name": "Dot \/ One Page Navigation",
+            "category": "Creative Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-dual-button": {
+            "name": "Dual Button",
+            "category": "Content Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-facebook-button": {
+            "name": "Facebook Button",
+            "category": "Social Media Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-facebook-comments": {
+            "name": "Facebook Comments",
+            "category": "Social Media Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-facebook-embed": {
+            "name": "Facebook Embed",
+            "category": "Social Media Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-facebook-page": {
+            "name": "Facebook Page",
+            "category": "Social Media Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-fancy-heading": {
+            "name": "Fancy Heading",
+            "category": "Creative Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-faq": {
+            "name": "FAQ",
+            "category": "Content Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-file-download": {
+            "name": "File Download",
+            "category": "Content Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-filterable-gallery": {
+            "name": "Filterable Gallery",
+            "category": "Media Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-flipbox": {
+            "name": "Flip Box",
+            "category": "Creative Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-gallery": {
+            "name": "Image\/Photo Gallery",
+            "category": "Media Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-google-map": {
+            "name": "Google Map",
+            "category": "Creative Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-heading": {
+            "name": "Smart Headings",
+            "category": "Content Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-highlight-box": {
+            "name": "Highlight Box",
+            "category": "Creative Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-hotspot": {
+            "name": "Hotspot",
+            "category": "Creative Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-hover-cards-2": {
+            "name": "Hover Cards 2",
+            "category": "Creative Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-hover-cards": {
+            "name": "Hover Cards",
+            "category": "Creative Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-how-to": {
+            "name": "How To",
+            "category": "Content Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-iconlist": {
+            "name": "Icon \/ Number List",
+            "category": "Content Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-image-carousel": {
+            "name": "Image Carousel",
+            "category": "Media Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-image-comparison": {
+            "name": "Image Comparison",
+            "category": "Media Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-image-panels": {
+            "name": "Image Panels",
+            "category": "Media Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-image-scroll": {
+            "name": "Image Scroll",
+            "category": "Media Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-image": {
+            "name": "Image",
+            "category": "Media Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-info-banner": {
+            "name": "Smart Banner",
+            "category": "Lead Generation Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-infobox": {
+            "name": "Info Box",
+            "category": "Content Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-infolist": {
+            "name": "Info List",
+            "category": "Content Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-instagram-feed": {
+            "name": "Instagram Feed",
+            "category": "Social Media Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-line-separator": {
+            "name": "Divider",
+            "category": "Creative Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-login-form": {
+            "name": "Login Form",
+            "category": "Content Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-logos-grid": {
+            "name": "Logo Grid & Carousel",
+            "category": "Creative Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-modal-box": {
+            "name": "Modal Box",
+            "category": "Lead Generation Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-ninja-form": {
+            "name": "Ninja Form",
+            "category": "Form Styler Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-notifications": {
+            "name": "Alert Box",
+            "category": "Lead Generation Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-offcanvas-content": {
+            "name": "Off-Canvas Content",
+            "category": "Creative Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-post-timeline": {
+            "name": "Post Timeline",
+            "category": "Creative Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-pricing-table": {
+            "name": "Pricing Table",
+            "category": "Content Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-pullquote": {
+            "name": "Pullquote",
+            "category": "Creative Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-registration-form": {
+            "name": "Registration Form",
+            "category": "Content Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-restaurant-menu": {
+            "name": "Restaurant \/ Services Menu",
+            "category": "Content Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-reviews": {
+            "name": "Reviews",
+            "category": "Content Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-search-form": {
+            "name": "Search Form",
+            "category": "Content Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-sitemap": {
+            "name": "Sitemap",
+            "category": "Content Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-sliding-menus": {
+            "name": "Sliding Menu",
+            "category": "Creative Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-smart-button": {
+            "name": "Smart Button",
+            "category": "Content Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-social-icons": {
+            "name": "Social Icons",
+            "category": "Social Media Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-social-share": {
+            "name": "Social Share",
+            "category": "Social Media Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-spacer": {
+            "name": "Spacer",
+            "category": "Creative Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-star-rating": {
+            "name": "Star Rating",
+            "category": "Content Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-subscribe-form": {
+            "name": "Subscribe Form",
+            "category": "Form Styler Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-table": {
+            "name": "Table",
+            "category": "Content Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-team": {
+            "name": "Team",
+            "category": "Content Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-testimonials": {
+            "name": "Testimonials",
+            "category": "Content Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-timeline": {
+            "name": "Timeline",
+            "category": "Creative Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-toc": {
+            "name": "Table of Contents",
+            "category": "Content Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-twitter-buttons": {
+            "name": "Twitter Buttons",
+            "category": "Social Media Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-twitter-grid": {
+            "name": "Twitter Embedded Grid",
+            "category": "Social Media Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-twitter-timeline": {
+            "name": "Twitter Embedded Timeline",
+            "category": "Social Media Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-twitter-tweet": {
+            "name": "Twitter Embedded Tweet",
+            "category": "Social Media Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-video-gallery": {
+            "name": "Video Gallery",
+            "category": "Media Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        },
+        "pp-video": {
+            "name": "Video",
+            "category": "Media Modules - PowerPack",
+            "group": "PowerPack Modules",
+            "enabled": true
+        }
+    },
+    "beavermind": [],
+    "other": {
+        "SmartSlider3": {
+            "name": "Smart Slider",
+            "category": "Basic",
+            "group": "",
+            "enabled": true
+        },
+        "beaver-builder-module": {
+            "name": "Smart Slider (Deprecated)",
+            "category": "Basic",
+            "group": "",
+            "enabled": true
+        }
+    }
+}
