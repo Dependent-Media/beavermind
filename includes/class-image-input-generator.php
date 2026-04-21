@@ -56,7 +56,8 @@ class ImageInputGenerator {
 			delete_transient( self::TRANSIENT . $user_id );
 		}
 
-		$brief_default = (string) ( $last['brief'] ?? '' );
+		$brief_default    = (string) ( $last['brief'] ?? '' );
+		$variants_default = (int) ( $last['variants'] ?? 1 );
 		?>
 		<div class="wrap">
 			<h1><?php esc_html_e( 'BeaverMind — From Image', 'beavermind' ); ?></h1>
@@ -66,20 +67,11 @@ class ImageInputGenerator {
 				<div class="notice notice-error"><p><strong><?php esc_html_e( 'Failed:', 'beavermind' ); ?></strong> <?php echo esc_html( $last['error'] ); ?></p></div>
 			<?php endif; ?>
 
-			<?php if ( $last && ! empty( $last['post_id'] ) ) : ?>
-				<div class="notice notice-success">
-					<p>
-						<?php
-						printf(
-							wp_kses_post( __( 'Generated draft <a href="%1$s" target="_blank">page #%2$d</a> — <a href="%3$s" target="_blank">edit with Beaver Builder</a>.', 'beavermind' ) ),
-							esc_url( get_edit_post_link( (int) $last['post_id'] ) ),
-							(int) $last['post_id'],
-							esc_url( add_query_arg( 'fl_builder', '', get_permalink( (int) $last['post_id'] ) ) )
-						);
-						?>
-					</p>
-				</div>
-			<?php endif; ?>
+			<?php
+			if ( $last && ! empty( $last['results'] ) ) {
+				PlanRunner::render_results_notice( (array) $last['results'] );
+			}
+			?>
 
 			<form action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post" enctype="multipart/form-data" style="margin-top:1.5rem;">
 				<input type="hidden" name="action" value="<?php echo esc_attr( self::ACTION ); ?>" />
@@ -117,6 +109,17 @@ class ImageInputGenerator {
 								</select>
 							</td>
 						</tr>
+						<tr>
+							<th scope="row"><label for="bm_variants"><?php esc_html_e( 'Variants', 'beavermind' ); ?></label></th>
+							<td>
+								<select id="bm_variants" name="variants">
+									<?php foreach ( array( 1, 2, 3, 5 ) as $n ) : ?>
+										<option value="<?php echo (int) $n; ?>" <?php selected( $variants_default, $n ); ?>><?php echo (int) $n; ?></option>
+									<?php endforeach; ?>
+								</select>
+								<p class="description"><?php esc_html_e( 'Generates N independent plans from the same image. Each variant is one Claude vision call.', 'beavermind' ); ?></p>
+							</td>
+						</tr>
 					</tbody>
 				</table>
 
@@ -132,13 +135,14 @@ class ImageInputGenerator {
 		}
 		check_admin_referer( self::ACTION );
 
-		$brief  = isset( $_POST['brief'] ) ? trim( wp_unslash( (string) $_POST['brief'] ) ) : '';
-		$status = isset( $_POST['post_status'] ) && in_array( $_POST['post_status'], array( 'draft', 'publish' ), true )
+		$brief    = isset( $_POST['brief'] ) ? trim( wp_unslash( (string) $_POST['brief'] ) ) : '';
+		$status   = isset( $_POST['post_status'] ) && in_array( $_POST['post_status'], array( 'draft', 'publish' ), true )
 			? (string) $_POST['post_status']
 			: 'draft';
+		$variants = isset( $_POST['variants'] ) ? (int) $_POST['variants'] : 1;
 
 		$user_id = get_current_user_id();
-		$store = array( 'brief' => $brief );
+		$store = array( 'brief' => $brief, 'variants' => $variants );
 
 		if ( empty( $_FILES['image'] ) || ! isset( $_FILES['image']['tmp_name'] ) || '' === $_FILES['image']['tmp_name'] ) {
 			$store['error'] = __( 'No image was uploaded. Pick a file and try again.', 'beavermind' );
@@ -178,19 +182,20 @@ class ImageInputGenerator {
 			$this->stash_and_redirect( $user_id, $store );
 		}
 
-		$plan = $this->planner->plan_from_image( $bytes, $media_type, $brief, array( 'post_status' => $status ) );
-		if ( is_wp_error( $plan ) ) {
-			$store['error'] = 'Plan failed: ' . $plan->get_error_message();
-			$this->stash_and_redirect( $user_id, $store );
+		$run = PlanRunner::run(
+			$variants,
+			fn() => $this->planner->plan_from_image( $bytes, $media_type, $brief, array( 'post_status' => $status ) ),
+			$this->writer,
+			$this->fragments
+		);
+		if ( empty( $run['results'] ) ) {
+			$store['error'] = 'All variants failed: ' . implode( ' · ', $run['errors'] );
+		} else {
+			$store['results'] = $run['results'];
+			if ( ! empty( $run['errors'] ) ) {
+				$store['error'] = 'Some variants failed: ' . implode( ' · ', $run['errors'] );
+			}
 		}
-
-		$post_id = $this->writer->apply_plan( $plan, $this->fragments );
-		if ( is_wp_error( $post_id ) ) {
-			$store['error'] = 'Write failed: ' . $post_id->get_error_message();
-			$this->stash_and_redirect( $user_id, $store );
-		}
-
-		$store['post_id'] = (int) $post_id;
 		$this->stash_and_redirect( $user_id, $store );
 	}
 

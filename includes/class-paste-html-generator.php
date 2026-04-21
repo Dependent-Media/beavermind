@@ -59,9 +59,10 @@ class PasteHTMLGenerator {
 			delete_transient( self::TRANSIENT . $user_id );
 		}
 
-		$html_default = (string) ( $last['html'] ?? '' );
-		$base_default = (string) ( $last['base_url'] ?? '' );
-		$hint_default = (string) ( $last['hint'] ?? '' );
+		$html_default     = (string) ( $last['html'] ?? '' );
+		$base_default     = (string) ( $last['base_url'] ?? '' );
+		$hint_default     = (string) ( $last['hint'] ?? '' );
+		$variants_default = (int) ( $last['variants'] ?? 1 );
 		?>
 		<div class="wrap">
 			<h1><?php esc_html_e( 'BeaverMind — Paste HTML', 'beavermind' ); ?></h1>
@@ -71,20 +72,11 @@ class PasteHTMLGenerator {
 				<div class="notice notice-error"><p><strong><?php esc_html_e( 'Failed:', 'beavermind' ); ?></strong> <?php echo esc_html( $last['error'] ); ?></p></div>
 			<?php endif; ?>
 
-			<?php if ( $last && ! empty( $last['post_id'] ) ) : ?>
-				<div class="notice notice-success">
-					<p>
-						<?php
-						printf(
-							wp_kses_post( __( 'Generated draft <a href="%1$s" target="_blank">page #%2$d</a> — <a href="%3$s" target="_blank">edit with Beaver Builder</a>.', 'beavermind' ) ),
-							esc_url( get_edit_post_link( (int) $last['post_id'] ) ),
-							(int) $last['post_id'],
-							esc_url( add_query_arg( 'fl_builder', '', get_permalink( (int) $last['post_id'] ) ) )
-						);
-						?>
-					</p>
-				</div>
-			<?php endif; ?>
+			<?php
+			if ( $last && ! empty( $last['results'] ) ) {
+				PlanRunner::render_results_notice( (array) $last['results'] );
+			}
+			?>
 
 			<form action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post" style="margin-top:1.5rem;">
 				<input type="hidden" name="action" value="<?php echo esc_attr( self::ACTION ); ?>" />
@@ -121,6 +113,16 @@ class PasteHTMLGenerator {
 								</select>
 							</td>
 						</tr>
+						<tr>
+							<th scope="row"><label for="bm_variants"><?php esc_html_e( 'Variants', 'beavermind' ); ?></label></th>
+							<td>
+								<select id="bm_variants" name="variants">
+									<?php foreach ( array( 1, 2, 3, 5 ) as $n ) : ?>
+										<option value="<?php echo (int) $n; ?>" <?php selected( $variants_default, $n ); ?>><?php echo (int) $n; ?></option>
+									<?php endforeach; ?>
+								</select>
+							</td>
+						</tr>
 					</tbody>
 				</table>
 
@@ -142,9 +144,10 @@ class PasteHTMLGenerator {
 		$status   = isset( $_POST['post_status'] ) && in_array( $_POST['post_status'], array( 'draft', 'publish' ), true )
 			? (string) $_POST['post_status']
 			: 'draft';
+		$variants = isset( $_POST['variants'] ) ? (int) $_POST['variants'] : 1;
 
 		$user_id = get_current_user_id();
-		$store = array( 'html' => $html, 'base_url' => $base_url, 'hint' => $hint );
+		$store = array( 'html' => $html, 'base_url' => $base_url, 'hint' => $hint, 'variants' => $variants );
 
 		if ( '' === trim( $html ) ) {
 			$store['error'] = __( 'HTML source is required.', 'beavermind' );
@@ -161,19 +164,20 @@ class PasteHTMLGenerator {
 			? "Redesign this HTML using the BeaverMind fragment library. Design direction: $hint. Preserve the page's offering, headings, and CTAs; rewrite copy to be sharper."
 			: "Redesign this HTML using the BeaverMind fragment library. Preserve the page's offering, headings, and CTAs; rewrite copy to be sharper.";
 
-		$plan = $this->planner->plan( $brief, array( 'post_status' => $status ), $ref );
-		if ( is_wp_error( $plan ) ) {
-			$store['error'] = 'Plan failed: ' . $plan->get_error_message();
-			$this->stash_and_redirect( $user_id, $store );
+		$run = PlanRunner::run(
+			$variants,
+			fn() => $this->planner->plan( $brief, array( 'post_status' => $status ), $ref ),
+			$this->writer,
+			$this->fragments
+		);
+		if ( empty( $run['results'] ) ) {
+			$store['error'] = 'All variants failed: ' . implode( ' · ', $run['errors'] );
+		} else {
+			$store['results'] = $run['results'];
+			if ( ! empty( $run['errors'] ) ) {
+				$store['error'] = 'Some variants failed: ' . implode( ' · ', $run['errors'] );
+			}
 		}
-
-		$post_id = $this->writer->apply_plan( $plan, $this->fragments );
-		if ( is_wp_error( $post_id ) ) {
-			$store['error'] = 'Write failed: ' . $post_id->get_error_message();
-			$this->stash_and_redirect( $user_id, $store );
-		}
-
-		$store['post_id'] = (int) $post_id;
 		$this->stash_and_redirect( $user_id, $store );
 	}
 

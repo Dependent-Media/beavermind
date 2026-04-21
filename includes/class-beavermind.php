@@ -97,6 +97,7 @@ final class Plugin {
 		require_once BEAVERMIND_DIR . 'includes/class-site-cloner.php';
 		require_once BEAVERMIND_DIR . 'includes/class-planner.php';
 		require_once BEAVERMIND_DIR . 'includes/class-inline-fragments.php';
+		require_once BEAVERMIND_DIR . 'includes/class-plan-runner.php';
 	}
 
 	public function get_option( string $key, $default = null ) {
