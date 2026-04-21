@@ -1,0 +1,71 @@
+{
+    "page": {
+        "title": "BeaverMind \u2014 landing sample",
+        "post_type": "page",
+        "post_status": "publish"
+    },
+    "fragments": [
+        {
+            "id": "hero-centered",
+            "slots": {
+                "headline": "Compose Beaver Builder pages like an architect",
+                "subhead": "BeaverMind uses Claude to draft on-brand Beaver Builder layouts from a brief, URL, HTML, image, or Figma frame \u2014 as editable modules, not static HTML.",
+                "cta_label": "Install Plugin",
+                "cta_url": "#install"
+            }
+        },
+        {
+            "id": "feature-grid-3col",
+            "slots": {
+                "section_heading": "Five ways in, one way out: Beaver Builder modules",
+                "feature_1_title": "Five input modalities",
+                "feature_1_body": "Paste a text brief, drop a URL, feed raw HTML, upload a screenshot, or link a Figma frame. BeaverMind reads the intent and composes a page.",
+                "feature_2_title": "Curated fragment library",
+                "feature_2_body": "Not raw HTML, not pixel-perfect clones. Claude assembles pages from a vetted library of Beaver Builder row and module patterns \u2014 design-system-aware redesigns you can actually edit.",
+                "feature_3_title": "Brand-aware from the first pass",
+                "feature_3_body": "Extracts site name, theme color, and logo from the source so hero, CTAs, and typography match your client's identity out of the gate."
+            }
+        },
+        {
+            "id": "two-col-content",
+            "slots": {
+                "left_heading": "Iterate in plain English",
+                "left_body": "<p>Tell BeaverMind what's off: <em>\"make the hero bolder,\"</em> <em>\"add a testimonials section under features,\"</em> <em>\"cut the FAQ.\"</em></p><p>Each pass rewrites the plan, not the whole page. Your edits in Beaver Builder stick around.</p>",
+                "right_heading": "Generate in bulk, pick the best",
+                "right_body": "<p>Ask for 1 to 5 variant plans per click and compare hero treatments, section order, and copy side by side.</p><p>Feed a sitemap and BeaverMind drafts the full set \u2014 home, services, about, contact \u2014 in one run, with consistent brand tokens across every page.</p>"
+            }
+        },
+        {
+            "id": "faq-list-4",
+            "slots": {
+                "section_heading": "Fair questions from skeptical builders",
+                "q1": "Is the output really editable Beaver Builder modules?",
+                "a1": "Yes. BeaverMind writes Beaver Builder row and module data \u2014 the same JSON the UI saves. Open any page in the builder and drag, duplicate, or delete like you always have. No shortcodes, no locked shadow DOM.",
+                "q2": "Does it try to pixel-clone the reference site?",
+                "a2": "No. BeaverMind does a design-system-aware redesign: it reads structure, hierarchy, and brand signals from the source, then composes a fresh layout from the fragment library. You get something on-brand, not a Frankenstein scrape.",
+                "q3": "How does brand extraction actually work?",
+                "a3": "When you pass a URL, BeaverMind pulls the site name, primary theme color, and logo, then threads them through the plan \u2014 CTA buttons, dark sections, logo slots. You can override any of it before generating.",
+                "q4": "Can it draft an entire site at once?",
+                "a4": "Point it at a sitemap or paste a list of page titles. BeaverMind plans each page against the same fragment library and brand tokens, so your home, services, and about pages feel like they were designed together \u2014 because they were."
+            }
+        },
+        {
+            "id": "cta-banner",
+            "slots": {
+                "headline": "Ship the site this afternoon",
+                "subhead": "Drop in a brief, a URL, or a Figma frame. Let BeaverMind draft the plan. Refine it in the builder you already know.",
+                "cta_label": "Get BeaverMind",
+                "cta_url": "#install"
+            }
+        }
+    ],
+    "theme": {
+        "colors": {
+            "primary": "7c2d12",
+            "bg_dark": "451a03",
+            "bg_light": "fef7ed",
+            "text_on_dark": "fef3c7",
+            "text_on_light": "1c1917"
+        }
+    }
+}
