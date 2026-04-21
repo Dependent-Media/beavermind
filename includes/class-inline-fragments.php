@@ -35,6 +35,10 @@ class InlineFragments {
 			'hero-with-image'     => self::hero_with_image(),
 			'feature-grid-3col'   => self::feature_grid_3col(),
 			'image-text-split'    => self::image_text_split(),
+			'testimonial-single'  => self::testimonial_single(),
+			'stats-row-3'         => self::stats_row_3(),
+			'logos-row-5'         => self::logos_row_5(),
+			'faq-list-4'          => self::faq_list_4(),
 			'cta-banner'          => self::cta_banner(),
 			'two-col-content'     => self::two_col_content(),
 		);
@@ -271,6 +275,212 @@ class InlineFragments {
 			'name'        => '3-Column Feature Grid',
 			'category'    => 'features',
 			'description' => 'Section heading above three equal feature columns, each with a sub-heading and short description. Use for "why choose us" or "what you get" sections.',
+			'slots'       => $slots,
+		);
+
+		return array( 'meta' => $meta, 'nodes' => $nodes );
+	}
+
+	private static function testimonial_single(): array {
+		$row   = 'bm-testi-row';
+		$grp   = 'bm-testi-grp';
+		$col   = 'bm-testi-col';
+		$quote = 'bm-testi-quote';
+		$attr  = 'bm-testi-attr';
+
+		$nodes = array(
+			$row   => self::row_node( $row, null, 0, array(
+				'width'             => 'fixed',
+				'content_width'     => 'fixed',
+				'content_alignment' => 'center',
+				'padding_top'       => 80,
+				'padding_bottom'    => 80,
+				'padding_left'      => 40,
+				'padding_right'     => 40,
+				'bg_type'           => 'color',
+				'bg_color'          => 'f9fafb',
+			) ),
+			$grp   => self::group_node( $grp, $row, 0 ),
+			$col   => self::col_node( $col, $grp, 0, array( 'size' => 80, 'content_alignment' => 'center' ) ),
+			$quote => self::module_node( $quote, $col, 0, 'heading', array(
+				'heading'   => '"A placeholder pull-quote about the product."',
+				'tag'       => 'h3',
+				'alignment' => 'center',
+			) ),
+			$attr  => self::module_node( $attr, $col, 1, 'rich-text', array(
+				'text' => '<p style="text-align:center;">— Placeholder Name, Title at Company</p>',
+			) ),
+		);
+
+		$meta = array(
+			'name'        => 'Single Testimonial',
+			'category'    => 'social-proof',
+			'description' => 'Centered pull-quote with an attribution line. Use when the reference has a single strong customer quote.',
+			'slots'       => array(
+				'quote'       => array( 'node' => $quote, 'field' => 'heading' ),
+				'attribution' => array( 'node' => $attr,  'field' => 'text' ),
+			),
+		);
+
+		return array( 'meta' => $meta, 'nodes' => $nodes );
+	}
+
+	private static function stats_row_3(): array {
+		$row = 'bm-stats-row';
+		$grp = 'bm-stats-grp';
+
+		$nodes = array(
+			$row => self::row_node( $row, null, 0, array(
+				'width'          => 'fixed',
+				'content_width'  => 'fixed',
+				'padding_top'    => 60,
+				'padding_bottom' => 60,
+				'padding_left'   => 20,
+				'padding_right'  => 20,
+			) ),
+			$grp => self::group_node( $grp, $row, 0 ),
+		);
+
+		$slots = array();
+		foreach ( array( 1, 2, 3 ) as $i ) {
+			$col    = "bm-stats-col-$i";
+			$number = "bm-stats-num-$i";
+			$label  = "bm-stats-lbl-$i";
+			$nodes[ $col ]    = self::col_node( $col, $grp, $i - 1, array(
+				'size'              => 33.33,
+				'content_alignment' => 'center',
+			) );
+			$nodes[ $number ] = self::module_node( $number, $col, 0, 'heading', array(
+				'heading'   => "100+",
+				'tag'       => 'h2',
+				'alignment' => 'center',
+			) );
+			$nodes[ $label ]  = self::module_node( $label, $col, 1, 'rich-text', array(
+				'text' => "<p style=\"text-align:center;\">Stat $i label</p>",
+			) );
+			$slots[ "stat_{$i}_number" ] = array( 'node' => $number, 'field' => 'heading' );
+			$slots[ "stat_{$i}_label" ]  = array( 'node' => $label,  'field' => 'text' );
+		}
+
+		$meta = array(
+			'name'        => '3-Column Stats Row',
+			'category'    => 'social-proof',
+			'description' => 'Three big numbers with short labels beneath. Use for metrics like "10M+ users", "99.9% uptime", "5-min setup".',
+			'slots'       => $slots,
+		);
+
+		return array( 'meta' => $meta, 'nodes' => $nodes );
+	}
+
+	private static function logos_row_5(): array {
+		$row      = 'bm-logos-row';
+		$intro_g  = 'bm-logos-intro-grp';
+		$intro_c  = 'bm-logos-intro-col';
+		$intro_h  = 'bm-logos-intro-h';
+		$grp      = 'bm-logos-grp';
+
+		$nodes = array(
+			$row      => self::row_node( $row, null, 0, array(
+				'width'             => 'fixed',
+				'content_width'     => 'fixed',
+				'padding_top'       => 40,
+				'padding_bottom'    => 40,
+				'padding_left'      => 20,
+				'padding_right'     => 20,
+				'bg_type'           => 'color',
+				'bg_color'          => 'f9fafb',
+			) ),
+			$intro_g  => self::group_node( $intro_g, $row, 0 ),
+			$intro_c  => self::col_node( $intro_c, $intro_g, 0, array( 'size' => 100, 'content_alignment' => 'center' ) ),
+			$intro_h  => self::module_node( $intro_h, $intro_c, 0, 'heading', array(
+				'heading'   => 'Trusted by teams at',
+				'tag'       => 'h4',
+				'alignment' => 'center',
+			) ),
+			$grp      => self::group_node( $grp, $row, 1 ),
+		);
+
+		$slots = array(
+			'intro_heading' => array( 'node' => $intro_h, 'field' => 'heading' ),
+		);
+
+		foreach ( array( 1, 2, 3, 4, 5 ) as $i ) {
+			$col   = "bm-logos-col-$i";
+			$photo = "bm-logos-photo-$i";
+			$nodes[ $col ]   = self::col_node( $col, $grp, $i - 1, array( 'size' => 20, 'content_alignment' => 'center' ) );
+			$nodes[ $photo ] = self::module_node( $photo, $col, 0, 'photo', array(
+				'photo_source' => 'url',
+				'photo_url'    => "https://via.placeholder.com/160x60?text=Logo+$i",
+				'url_title'    => "Logo $i",
+				'align'        => 'center',
+				'crop'         => '',
+				'link_type'    => '',
+			) );
+			$slots[ "logo_{$i}_url" ] = array( 'node' => $photo, 'field' => 'photo_url' );
+			$slots[ "logo_{$i}_alt" ] = array( 'node' => $photo, 'field' => 'url_title' );
+		}
+
+		$meta = array(
+			'name'        => 'Logos Row (5)',
+			'category'    => 'social-proof',
+			'description' => 'Horizontal row of 5 customer or partner logos with an intro line. Only use this fragment when the reference site actually shows logos — do not invent them.',
+			'slots'       => $slots,
+		);
+
+		return array( 'meta' => $meta, 'nodes' => $nodes );
+	}
+
+	private static function faq_list_4(): array {
+		$row       = 'bm-faq-row';
+		$intro_g   = 'bm-faq-intro-grp';
+		$intro_c   = 'bm-faq-intro-col';
+		$intro_h   = 'bm-faq-intro-h';
+		$body_g    = 'bm-faq-body-grp';
+		$body_c    = 'bm-faq-body-col';
+
+		$nodes = array(
+			$row     => self::row_node( $row, null, 0, array(
+				'width'          => 'fixed',
+				'content_width'  => 'fixed',
+				'padding_top'    => 60,
+				'padding_bottom' => 60,
+				'padding_left'   => 20,
+				'padding_right'  => 20,
+			) ),
+			$intro_g => self::group_node( $intro_g, $row, 0 ),
+			$intro_c => self::col_node( $intro_c, $intro_g, 0, array( 'size' => 100, 'content_alignment' => 'center' ) ),
+			$intro_h => self::module_node( $intro_h, $intro_c, 0, 'heading', array(
+				'heading'   => 'Frequently asked questions',
+				'tag'       => 'h2',
+				'alignment' => 'center',
+			) ),
+			$body_g  => self::group_node( $body_g, $row, 1 ),
+			$body_c  => self::col_node( $body_c, $body_g, 0, array( 'size' => 100 ) ),
+		);
+
+		$slots = array(
+			'section_heading' => array( 'node' => $intro_h, 'field' => 'heading' ),
+		);
+
+		$position = 0;
+		foreach ( array( 1, 2, 3, 4 ) as $i ) {
+			$q = "bm-faq-q-$i";
+			$a = "bm-faq-a-$i";
+			$nodes[ $q ] = self::module_node( $q, $body_c, $position++, 'heading', array(
+				'heading' => "Question $i goes here",
+				'tag'     => 'h4',
+			) );
+			$nodes[ $a ] = self::module_node( $a, $body_c, $position++, 'rich-text', array(
+				'text' => "<p>Answer $i — explain in 1-3 sentences. Link out to deeper docs if helpful.</p>",
+			) );
+			$slots[ "q{$i}" ] = array( 'node' => $q, 'field' => 'heading' );
+			$slots[ "a{$i}" ] = array( 'node' => $a, 'field' => 'text' );
+		}
+
+		$meta = array(
+			'name'        => '4-Item FAQ List',
+			'category'    => 'content',
+			'description' => 'Section heading above 4 stacked Q/A pairs. Use when the reference has an FAQ or a short "Common questions" section. Claude writes both the questions and the answers.',
 			'slots'       => $slots,
 		);
 
