@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  php:
+    name: PHP lint + composer
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: composer:v2
+
+      - name: Validate composer.json
+        run: composer validate --strict
+
+      - name: Lint plugin PHP files
+        run: |
+          # Lint plugin source only — vendor/ is upstream-validated.
+          find . -type f -name '*.php' -not -path './vendor/*' -print0 \
+            | xargs -0 -P4 -n1 -- php -l > /dev/null
+
+      - name: Verify autoloader resolves Anthropic SDK
+        run: |
+          php -r '
+            require __DIR__ . "/vendor/autoload.php";
+            if (!class_exists("\\Anthropic\\Client")) {
+              fwrite(STDERR, "Anthropic SDK not loadable\n");
+              exit(1);
+            }
+            echo "OK\n";
+          '
