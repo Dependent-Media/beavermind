@@ -15,6 +15,15 @@ struct TestSidebarView: View {
                     .buttonStyle(.borderedProminent)
                     .controlSize(.small)
 
+                    Button {
+                        vm.runLastFailing()
+                    } label: {
+                        Label("Run Failing (\(vm.failedCount))", systemImage: "arrow.triangle.2.circlepath")
+                    }
+                    .disabled(vm.isRunning || !vm.hasFailedTests)
+                    .controlSize(.small)
+                    .help("Re-run only the tests that failed in the last run (Playwright --last-failed)")
+
                     Button("Refresh", systemImage: "arrow.clockwise") {
                         vm.refreshSpecs()
                     }
@@ -95,7 +104,7 @@ struct TestSidebarView: View {
                                     test: test,
                                     result: vm.results[test.fullTitle],
                                     onRun: { vm.runTest(test.fullTitle) },
-                                    onShowScreenshot: { vm.openScreenshotForTest(test.name) }
+                                    onShowScreenshot: { vm.previewScreenshotForTest(test.name) }
                                 )
                             }
                         } label: {

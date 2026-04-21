@@ -16,6 +16,12 @@ class TestRunnerVM: ObservableObject {
     @Published var startTime: Date?
     @Published var runMode: RunMode = .headless
     @Published var authCookieStatus: AuthCookieStatus?
+    /// When set, the detail pane flips from Console to ScreenshotView. Cleared
+    /// by ScreenshotView's "Back to Console" button.
+    @Published var previewedScreenshot: (path: String, testName: String)?
+    /// Threshold above which a completed run posts a macOS notification.
+    /// Short runs (the normal 15-20s happy path) stay quiet.
+    var notifyIfLongerThan: TimeInterval = 30
 
     enum AuthCookieStatus {
         case refreshing
@@ -228,12 +234,23 @@ class TestRunnerVM: ObservableObject {
 
     // MARK: - Run Tests
 
+    /// True when the last completed run left at least one failing test.
+    /// Drives the enabled state of the "Run Failing" button.
+    var hasFailedTests: Bool { failedCount > 0 }
+
     func runAll() {
         runPlaywright(args: "")
     }
 
     func runSpec(_ fileName: String) {
         runPlaywright(args: fileName)
+    }
+
+    /// Re-run only the tests that failed in the last run.
+    /// Uses Playwright's built-in `--last-failed` flag, which reads the
+    /// result of the most recent invocation from test-results/.last-run.json.
+    func runLastFailing() {
+        runPlaywright(args: "--last-failed")
     }
 
     func runTest(_ fullTitle: String) {
@@ -286,6 +303,19 @@ class TestRunnerVM: ObservableObject {
             let (stdout, _) = await runShellCommandStreaming(cmd)
             parseResults(stdout)
             isRunning = false
+
+            // Post a macOS notification if the run was long enough that the
+            // user probably tabbed away. Short runs (~15-20s) stay quiet.
+            if let start = startTime {
+                let elapsed = Date().timeIntervalSince(start)
+                if elapsed >= notifyIfLongerThan {
+                    await NotificationService.shared.postRunFinished(
+                        passed: passedCount,
+                        failed: failedCount,
+                        elapsedSeconds: elapsed
+                    )
+                }
+            }
         }
     }
 
@@ -365,22 +395,35 @@ class TestRunnerVM: ObservableObject {
         launchDetached("npx playwright show-report")
     }
 
-    /// Find and open the failure screenshot for a specific test.
-    func openScreenshotForTest(_ testName: String) {
-        let fm = FileManager.default
-        guard let dirs = try? fm.contentsOfDirectory(atPath: testResultsPath) else { return }
+    /// Locate the failure screenshot for a test and show it in the detail
+    /// pane (flipping the console away). Falls back to opening the folder
+    /// externally if no match is found.
+    func previewScreenshotForTest(_ testName: String) {
+        guard let png = findScreenshotPath(forTest: testName) else {
+            openTestResults()
+            return
+        }
+        previewedScreenshot = (path: png, testName: testName)
+    }
 
-        // Playwright names result dirs using slugified test names.
-        // Look for a directory containing part of the test name.
+    /// Dismiss the in-app screenshot preview and return to the console.
+    func dismissScreenshotPreview() {
+        previewedScreenshot = nil
+    }
+
+    /// Best-effort match from a test title to a `test-results/<slug>/` PNG.
+    /// Used by previewScreenshotForTest.
+    private func findScreenshotPath(forTest testName: String) -> String? {
+        let fm = FileManager.default
+        guard let dirs = try? fm.contentsOfDirectory(atPath: testResultsPath) else { return nil }
+
         let slug = testName.lowercased()
             .replacingOccurrences(of: " ", with: "-")
             .replacingOccurrences(of: ".", with: "-")
 
-        // Find best matching directory.
         let keywords = slug.components(separatedBy: "-").filter { $0.count > 3 }
         var bestMatch: String?
         var bestScore = 0
-
         for dir in dirs {
             let dirLower = dir.lowercased()
             let score = keywords.filter { dirLower.contains($0) }.count
@@ -389,24 +432,18 @@ class TestRunnerVM: ObservableObject {
                 bestMatch = dir
             }
         }
-
-        guard let matchDir = bestMatch else {
-            openTestResults()
-            return
-        }
+        guard let matchDir = bestMatch else { return nil }
 
         let dirPath = testResultsPath + "/" + matchDir
-
-        // Find PNG files in the directory.
-        if let files = try? fm.contentsOfDirectory(atPath: dirPath) {
-            if let png = files.first(where: { $0.hasSuffix(".png") }) {
-                NSWorkspace.shared.open(URL(fileURLWithPath: dirPath + "/" + png))
-                return
-            }
+        guard let files = try? fm.contentsOfDirectory(atPath: dirPath) else { return nil }
+        // Prefer the "test-failed" image Playwright always writes, then any PNG.
+        if let failed = files.first(where: { $0.contains("test-failed") && $0.hasSuffix(".png") }) {
+            return dirPath + "/" + failed
         }
-
-        // Fallback: open the directory.
-        NSWorkspace.shared.open(URL(fileURLWithPath: dirPath))
+        if let png = files.first(where: { $0.hasSuffix(".png") }) {
+            return dirPath + "/" + png
+        }
+        return nil
     }
 
     // MARK: - Shell Execution
