@@ -56,8 +56,9 @@ class CloneGenerator {
 			delete_transient( self::TRANSIENT . $user_id );
 		}
 
-		$url_default  = $last['url'] ?? ( isset( $_GET['url'] ) ? esc_url_raw( wp_unslash( (string) $_GET['url'] ) ) : '' );
-		$hint_default = $last['hint'] ?? '';
+		$url_default      = $last['url'] ?? ( isset( $_GET['url'] ) ? esc_url_raw( wp_unslash( (string) $_GET['url'] ) ) : '' );
+		$hint_default     = $last['hint'] ?? '';
+		$variants_default = (int) ( $last['variants'] ?? 1 );
 		?>
 		<div class="wrap">
 			<h1><?php esc_html_e( 'BeaverMind — Clone from URL', 'beavermind' ); ?></h1>
@@ -67,23 +68,22 @@ class CloneGenerator {
 				<div class="notice notice-error" data-testid="bm-error"><p><strong><?php esc_html_e( 'Failed:', 'beavermind' ); ?></strong> <?php echo esc_html( $last['error'] ); ?></p></div>
 			<?php endif; ?>
 
-			<?php if ( $last && ! empty( $last['post_id'] ) ) : ?>
-				<div class="notice notice-success" data-testid="bm-success">
-					<p>
-						<?php
-						printf(
-							wp_kses_post( __( 'Cloned <a href="%1$s" target="_blank">%2$s</a> into draft <a href="%3$s" target="_blank" data-testid="bm-edit-link">page #%4$d</a> — <a href="%5$s" target="_blank" data-testid="bm-bb-link">edit with Beaver Builder</a>.', 'beavermind' ) ),
-							esc_url( $last['url'] ),
-							esc_html( $last['url'] ),
-							esc_url( get_edit_post_link( (int) $last['post_id'] ) ),
-							(int) $last['post_id'],
-							esc_url( add_query_arg( 'fl_builder', '', get_permalink( (int) $last['post_id'] ) ) )
-						);
-						?>
-					</p>
-				</div>
-				<?php $this->render_summary( $last ); ?>
-			<?php endif; ?>
+			<?php
+			if ( $last && ! empty( $last['results'] ) ) {
+				PlanRunner::render_results_notice( (array) $last['results'] );
+				if ( count( $last['results'] ) === 1 ) {
+					$first = $last['results'][0];
+					// Bring back the source-title / source-sections context from
+					// the per-page summary (only meaningful for single-variant
+					// runs since multi-variant share the same source).
+					$summary = array_merge( $first, array(
+						'source_title'    => $last['source_title']    ?? '',
+						'source_sections' => $last['source_sections'] ?? 0,
+					) );
+					$this->render_summary( $summary );
+				}
+			}
+			?>
 
 			<form action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post" style="margin-top:1.5rem;" data-testid="bm-clone-form">
 				<input type="hidden" name="action" value="<?php echo esc_attr( self::ACTION ); ?>" />
@@ -112,6 +112,17 @@ class CloneGenerator {
 									<option value="draft" selected><?php esc_html_e( 'Draft (recommended)', 'beavermind' ); ?></option>
 									<option value="publish"><?php esc_html_e( 'Publish immediately', 'beavermind' ); ?></option>
 								</select>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="bm_variants"><?php esc_html_e( 'Variants', 'beavermind' ); ?></label></th>
+							<td>
+								<select id="bm_variants" name="variants">
+									<?php foreach ( array( 1, 2, 3, 5 ) as $n ) : ?>
+										<option value="<?php echo (int) $n; ?>" <?php selected( $variants_default, $n ); ?>><?php echo (int) $n; ?></option>
+									<?php endforeach; ?>
+								</select>
+								<p class="description"><?php esc_html_e( 'Independent plans for the same source. Each variant adds ~15-30s and one Claude API call.', 'beavermind' ); ?></p>
 							</td>
 						</tr>
 					</tbody>
@@ -163,14 +174,15 @@ class CloneGenerator {
 		}
 		check_admin_referer( self::ACTION );
 
-		$url    = isset( $_POST['url'] ) ? esc_url_raw( wp_unslash( (string) $_POST['url'] ) ) : '';
-		$hint   = isset( $_POST['hint'] ) ? trim( wp_unslash( (string) $_POST['hint'] ) ) : '';
-		$status = isset( $_POST['post_status'] ) && in_array( $_POST['post_status'], array( 'draft', 'publish' ), true )
+		$url      = isset( $_POST['url'] ) ? esc_url_raw( wp_unslash( (string) $_POST['url'] ) ) : '';
+		$hint     = isset( $_POST['hint'] ) ? trim( wp_unslash( (string) $_POST['hint'] ) ) : '';
+		$status   = isset( $_POST['post_status'] ) && in_array( $_POST['post_status'], array( 'draft', 'publish' ), true )
 			? (string) $_POST['post_status']
 			: 'draft';
+		$variants = isset( $_POST['variants'] ) ? (int) $_POST['variants'] : 1;
 
 		$user_id = get_current_user_id();
-		$store = array( 'url' => $url, 'hint' => $hint );
+		$store = array( 'url' => $url, 'hint' => $hint, 'variants' => $variants );
 
 		if ( '' === $url ) {
 			$store['error'] = __( 'URL is required.', 'beavermind' );
@@ -198,30 +210,26 @@ class CloneGenerator {
 			}
 		}
 
-		// Step 2: plan with reference (and optional vision image).
+		// Steps 2 + 3: plan(s) and write(s) — handled by PlanRunner so the
+		// variants loop matches every other generator.
 		$brief = '' !== $hint
 			? "Redesign this page using the BeaverMind fragment library. Design direction: $hint. Preserve the page's actual offering, headings, and CTAs, but rewrite copy to be sharper."
 			: "Redesign this page using the BeaverMind fragment library. Preserve the page's actual offering, headings, and CTAs, but rewrite copy to be sharper.";
 
-		$plan = $this->planner->plan( $brief, array( 'post_status' => $status ), $ref, $reference_image );
-		if ( is_wp_error( $plan ) ) {
-			$store['error'] = 'Plan failed: ' . $plan->get_error_message();
-			$this->stash_and_redirect( $user_id, $store );
+		$run = PlanRunner::run(
+			$variants,
+			fn() => $this->planner->plan( $brief, array( 'post_status' => $status ), $ref, $reference_image ),
+			$this->writer,
+			$this->fragments
+		);
+		if ( empty( $run['results'] ) ) {
+			$store['error'] = 'All variants failed: ' . implode( ' · ', $run['errors'] );
+		} else {
+			$store['results'] = $run['results'];
+			if ( ! empty( $run['errors'] ) ) {
+				$store['error'] = 'Some variants failed: ' . implode( ' · ', $run['errors'] );
+			}
 		}
-
-		// Step 3: write.
-		$post_id = $this->writer->apply_plan( $plan, $this->fragments );
-		if ( is_wp_error( $post_id ) ) {
-			$store['error'] = 'Write failed: ' . $post_id->get_error_message();
-			$store['title'] = $plan['page']['title'] ?? '';
-			$store['fragments'] = $plan['fragments'] ?? array();
-			$this->stash_and_redirect( $user_id, $store );
-		}
-
-		$store['post_id']   = (int) $post_id;
-		$store['title']     = $plan['page']['title'] ?? '';
-		$store['fragments'] = $plan['fragments'] ?? array();
-		$store['usage']     = $plan['usage'] ?? null;
 		$this->stash_and_redirect( $user_id, $store );
 	}
 

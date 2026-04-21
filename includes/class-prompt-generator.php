@@ -70,47 +70,14 @@ class PromptGenerator {
 				<div class="notice notice-error"><p><strong><?php esc_html_e( 'Generation failed:', 'beavermind' ); ?></strong> <?php echo esc_html( $last['error'] ); ?></p></div>
 			<?php endif; ?>
 
-			<?php if ( $last && ! empty( $last['variants_results'] ) ) : ?>
-				<div class="notice notice-success">
-					<p><strong><?php
-					printf(
-						/* translators: %d: number of variants generated */
-						esc_html( _n( 'Generated %d variant:', 'Generated %d variants:', count( $last['variants_results'] ), 'beavermind' ) ),
-						count( $last['variants_results'] )
-					);
-					?></strong></p>
-					<ol>
-						<?php foreach ( $last['variants_results'] as $i => $v ) : ?>
-							<li>
-								<?php
-								printf(
-									wp_kses_post( __( '<a href="%1$s" target="_blank">page #%2$d</a> — <em>%3$s</em> — <a href="%4$s" target="_blank">edit with Beaver Builder</a>', 'beavermind' ) ),
-									esc_url( get_edit_post_link( (int) $v['post_id'] ) ),
-									(int) $v['post_id'],
-									esc_html( $v['title'] ?? '(untitled)' ),
-									esc_url( add_query_arg( 'fl_builder', '', get_permalink( (int) $v['post_id'] ) ) )
-								);
-								?>
-								&nbsp;<small style="color:#666;">[<?php echo esc_html( implode( ', ', array_column( (array) ( $v['fragments'] ?? array() ), 'id' ) ) ); ?>]</small>
-							</li>
-						<?php endforeach; ?>
-					</ol>
-				</div>
-			<?php elseif ( $last && ! empty( $last['post_id'] ) ) : ?>
-				<div class="notice notice-success">
-					<p>
-						<?php
-						printf(
-							wp_kses_post( __( 'Generated page <a href="%1$s" target="_blank">#%2$d</a> — <a href="%3$s" target="_blank">edit with Beaver Builder</a>.', 'beavermind' ) ),
-							esc_url( get_edit_post_link( (int) $last['post_id'] ) ),
-							(int) $last['post_id'],
-							esc_url( add_query_arg( 'fl_builder', '', get_permalink( (int) $last['post_id'] ) ) )
-						);
-						?>
-					</p>
-				</div>
-				<?php $this->render_plan_summary( $last ); ?>
-			<?php endif; ?>
+			<?php
+			if ( $last && ! empty( $last['results'] ) ) {
+				PlanRunner::render_results_notice( (array) $last['results'] );
+				if ( count( $last['results'] ) === 1 ) {
+					$this->render_plan_summary( $last['results'][0] );
+				}
+			}
+			?>
 
 			<form action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post" style="margin-top:1.5rem;">
 				<input type="hidden" name="action" value="<?php echo esc_attr( self::ACTION ); ?>" />
@@ -216,10 +183,7 @@ class PromptGenerator {
 		$status = isset( $_POST['post_status'] ) && in_array( $_POST['post_status'], array( 'draft', 'publish' ), true )
 			? (string) $_POST['post_status']
 			: 'draft';
-		// Cap variants at 5 — each one is a full Claude round trip + write,
-		// and admin-post can't run forever (PHP max_execution_time).
 		$variants = isset( $_POST['variants'] ) ? (int) $_POST['variants'] : 1;
-		$variants = max( 1, min( 5, $variants ) );
 
 		$user_id = get_current_user_id();
 		$store = array( 'brief' => $brief, 'variants' => $variants );
@@ -229,58 +193,19 @@ class PromptGenerator {
 			$this->stash_and_redirect( $user_id, $store );
 		}
 
-		// Single-variant path keeps the original UX: stash plan summary +
-		// usage so render_plan_summary can show the details inline.
-		if ( 1 === $variants ) {
-			$plan = $this->planner->plan( $brief, array( 'post_status' => $status ) );
-			if ( is_wp_error( $plan ) ) {
-				$store['error'] = $plan->get_error_message();
-				$this->stash_and_redirect( $user_id, $store );
-			}
-			$post_id = $this->writer->apply_plan( $plan, $this->fragments );
-			if ( is_wp_error( $post_id ) ) {
-				$store['error']     = $post_id->get_error_message();
-				$store['title']     = $plan['page']['title'] ?? '';
-				$store['fragments'] = $plan['fragments'] ?? array();
-				$this->stash_and_redirect( $user_id, $store );
-			}
-			$store['post_id']   = (int) $post_id;
-			$store['title']     = $plan['page']['title'] ?? '';
-			$store['fragments'] = $plan['fragments'] ?? array();
-			$store['usage']     = $plan['usage'] ?? null;
-			$this->stash_and_redirect( $user_id, $store );
-		}
+		$run = PlanRunner::run(
+			$variants,
+			fn() => $this->planner->plan( $brief, array( 'post_status' => $status ) ),
+			$this->writer,
+			$this->fragments
+		);
 
-		// Multi-variant path: loop sequentially. Each plan is independent
-		// (Claude's adaptive thinking gives natural variance per run);
-		// no special "differentiate from variant N" prompt needed for v1.
-		$results = array();
-		$errors  = array();
-		for ( $i = 1; $i <= $variants; $i++ ) {
-			$plan = $this->planner->plan( $brief, array( 'post_status' => $status ) );
-			if ( is_wp_error( $plan ) ) {
-				$errors[] = "variant $i: " . $plan->get_error_message();
-				continue;
-			}
-			$post_id = $this->writer->apply_plan( $plan, $this->fragments );
-			if ( is_wp_error( $post_id ) ) {
-				$errors[] = "variant $i: " . $post_id->get_error_message();
-				continue;
-			}
-			$results[] = array(
-				'post_id'   => (int) $post_id,
-				'title'     => $plan['page']['title'] ?? '',
-				'fragments' => $plan['fragments'] ?? array(),
-				'usage'     => $plan['usage'] ?? null,
-			);
-		}
-
-		if ( empty( $results ) ) {
-			$store['error'] = 'All variants failed: ' . implode( ' · ', $errors );
+		if ( empty( $run['results'] ) ) {
+			$store['error'] = 'All variants failed: ' . implode( ' · ', $run['errors'] );
 		} else {
-			$store['variants_results'] = $results;
-			if ( ! empty( $errors ) ) {
-				$store['error'] = 'Some variants failed: ' . implode( ' · ', $errors );
+			$store['results'] = $run['results'];
+			if ( ! empty( $run['errors'] ) ) {
+				$store['error'] = 'Some variants failed: ' . implode( ' · ', $run['errors'] );
 			}
 		}
 		$this->stash_and_redirect( $user_id, $store );
