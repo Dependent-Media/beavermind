@@ -112,6 +112,95 @@ class Planner {
 	}
 
 	/**
+	 * Plan a page from an uploaded image (screenshot, mockup, Figma export).
+	 * Uses Claude's vision capability — the image is sent inline as base64.
+	 *
+	 * @param string $image_data  Raw bytes of the image (NOT base64-encoded).
+	 * @param string $media_type  e.g. "image/png", "image/jpeg", "image/webp", "image/gif".
+	 * @param string $brief       Free-text instruction (style, audience, constraints).
+	 * @param array  $page_meta   Overrides for the page (title, post_status).
+	 *
+	 * @return array|\WP_Error
+	 */
+	public function plan_from_image( string $image_data, string $media_type, string $brief, array $page_meta = array() ) {
+		if ( ! $this->claude->is_configured() ) {
+			return new \WP_Error( 'beavermind_no_key', 'Claude API key is not configured.' );
+		}
+		$catalog = $this->fragments->catalog();
+		if ( empty( $catalog ) ) {
+			return new \WP_Error( 'beavermind_no_fragments', 'No fragments are registered.' );
+		}
+
+		// Anthropic accepts image_data inline as base64. 5 MB is the per-image
+		// limit (encoded), so cap on the raw bytes before encoding.
+		if ( strlen( $image_data ) > 3_500_000 ) {
+			return new \WP_Error( 'beavermind_image_too_big', 'Image is too large. Max ~3.5 MB. Resize and retry.' );
+		}
+		$allowed = array( 'image/png', 'image/jpeg', 'image/webp', 'image/gif' );
+		if ( ! in_array( $media_type, $allowed, true ) ) {
+			return new \WP_Error( 'beavermind_bad_image_type', 'Unsupported image type. Use PNG, JPEG, WebP, or GIF.' );
+		}
+
+		$user_message_text = "Design brief:\n\n" . $brief
+			. "\n\nThe attached image is the visual reference. Examine its sections, hierarchy, copy length, and any visible CTAs. Pick fragments that mirror the structure (hero, features, social proof, CTA, etc.) and write copy that fits both the brief and what's visible in the image. If the image shows specific text — headlines, button labels, stat numbers — preserve the meaning. Don't try to perfectly clone the visual; it's a rough guide.";
+
+		try {
+			$response = $this->claude->client()->messages->create(
+				model: $this->model,
+				maxTokens: 16000,
+				thinking: array( 'type' => 'adaptive' ),
+				system: array(
+					array( 'type' => 'text', 'text' => $this->frozen_system_prompt() ),
+					array(
+						'type'         => 'text',
+						'text'         => $this->render_catalog( $catalog ),
+						'cacheControl' => array( 'type' => 'ephemeral' ),
+					),
+				),
+				messages: array(
+					array(
+						'role'    => 'user',
+						'content' => array(
+							array(
+								'type'   => 'image',
+								'source' => array(
+									'type'      => 'base64',
+									'media_type' => $media_type,
+									'data'      => base64_encode( $image_data ),
+								),
+							),
+							array(
+								'type' => 'text',
+								'text' => $user_message_text,
+							),
+						),
+					),
+				),
+				outputConfig: array(
+					'format' => array(
+						'type'   => 'json_schema',
+						'schema' => $this->plan_schema( array_keys( $catalog ) ),
+					),
+				),
+			);
+		} catch ( \Anthropic\AuthenticationError $e ) {
+			return new \WP_Error( 'beavermind_auth', 'Claude API rejected the API key. ' . $e->getMessage() );
+		} catch ( \Anthropic\InvalidRequestError $e ) {
+			return new \WP_Error( 'beavermind_bad_request', 'Bad request to Claude API: ' . $e->getMessage() );
+		} catch ( \Anthropic\OverloadedError $e ) {
+			return new \WP_Error( 'beavermind_overloaded', 'Claude API is temporarily overloaded.' );
+		} catch ( \Anthropic\RateLimitError $e ) {
+			return new \WP_Error( 'beavermind_rate_limit', 'Claude API rate limit hit.' );
+		} catch ( \Anthropic\APIError $e ) {
+			return new \WP_Error( 'beavermind_api_error', 'Claude API error: ' . $e->getMessage() );
+		} catch ( \Throwable $e ) {
+			return new \WP_Error( 'beavermind_unknown', 'Unexpected error: ' . $e->getMessage() );
+		}
+
+		return $this->decode_response( $response, $page_meta );
+	}
+
+	/**
 	 * Refine an existing BeaverMind-generated page: load its stored plan, ask
 	 * Claude to modify it per the user's instruction, and return the new plan.
 	 *
