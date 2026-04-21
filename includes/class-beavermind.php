@@ -66,6 +66,9 @@ final class Plugin {
 			$this->fragments,
 			new SiteCloner()
 		) )->register();
+
+		require_once BEAVERMIND_DIR . 'includes/class-image-input-generator.php';
+		( new ImageInputGenerator( $this->planner, $this->writer, $this->fragments ) )->register();
 	}
 
 	private function load_dependencies(): void {
