@@ -168,7 +168,11 @@ class PasteHTMLGenerator {
 			$variants,
 			fn() => $this->planner->plan( $brief, array( 'post_status' => $status ), $ref ),
 			$this->writer,
-			$this->fragments
+			$this->fragments,
+			array(
+				'image_filler' => Plugin::instance()->image_filler,
+				'brief'        => trim( (string) ( $ref['brand']['site_name'] ?? '' ) . ' ' . $hint ) ?: $brief,
+			)
 		);
 		if ( empty( $run['results'] ) ) {
 			$store['error'] = 'All variants failed: ' . implode( ' · ', $run['errors'] );

@@ -220,7 +220,13 @@ class CloneGenerator {
 			$variants,
 			fn() => $this->planner->plan( $brief, array( 'post_status' => $status ), $ref, $reference_image ),
 			$this->writer,
-			$this->fragments
+			$this->fragments,
+			array(
+				'image_filler' => Plugin::instance()->image_filler,
+				// Use the site name + hint as the context — cleaner prompt
+				// hint for Haiku than the default "redesign this page" brief.
+				'brief'        => trim( (string) ( $ref['brand']['site_name'] ?? '' ) . ' ' . $hint ) ?: $brief,
+			)
 		);
 		if ( empty( $run['results'] ) ) {
 			$store['error'] = 'All variants failed: ' . implode( ' · ', $run['errors'] );

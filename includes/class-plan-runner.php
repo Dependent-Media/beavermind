@@ -27,17 +27,21 @@ class PlanRunner {
 	 * @param callable():(array|\WP_Error) $plan_factory  Returns a fresh plan per call.
 	 * @param LayoutWriter    $writer
 	 * @param FragmentLibrary $fragments
+	 * @param array           $apply_options Forwarded to LayoutWriter::apply_plan; used to
+	 *                                       thread in the Pexels image filler + brief
+	 *                                       context. Shape matches apply_plan()'s $options.
 	 *
 	 * @return array{results: array<int, array>, errors: array<int, string>}
 	 *   results[i] = ['post_id'=>int, 'title'=>string, 'fragments'=>array,
-	 *                 'theme'=>?array, 'usage'=>?array]
+	 *                 'theme'=>?array, 'usage'=>?array, 'images'=>?int]
 	 *   errors[]    = "variant N: <message>"
 	 */
 	public static function run(
 		int $variants,
 		callable $plan_factory,
 		LayoutWriter $writer,
-		FragmentLibrary $fragments
+		FragmentLibrary $fragments,
+		array $apply_options = array()
 	): array {
 		$variants = max( 1, min( self::MAX_VARIANTS, $variants ) );
 		$results = array();
@@ -49,7 +53,7 @@ class PlanRunner {
 				$errors[] = "variant $i: " . $plan->get_error_message();
 				continue;
 			}
-			$post_id = $writer->apply_plan( $plan, $fragments );
+			$post_id = $writer->apply_plan( $plan, $fragments, $apply_options );
 			if ( is_wp_error( $post_id ) ) {
 				$errors[] = "variant $i: " . $post_id->get_error_message();
 				continue;
@@ -60,6 +64,11 @@ class PlanRunner {
 				'fragments' => $plan['fragments'] ?? array(),
 				'theme'     => $plan['theme'] ?? null,
 				'usage'     => $plan['usage'] ?? null,
+				// ImageFiller stamps attributions on the plan; surfacing the
+				// count lets generators render "X images from Pexels" notices.
+				'images'    => isset( $plan['image_attributions'] ) && is_array( $plan['image_attributions'] )
+					? count( $plan['image_attributions'] )
+					: 0,
 			);
 		}
 
@@ -113,6 +122,15 @@ class PlanRunner {
 								count( $fragments ),
 								esc_html( implode( ', ', $fragments ) )
 							);
+							$images = (int) ( $v['images'] ?? 0 );
+							if ( $images > 0 ) {
+								echo '<br>';
+								printf(
+									/* translators: %d: number of images sourced from Pexels */
+									esc_html( _n( '%d image from Pexels', '%d images from Pexels', $images, 'beavermind' ) ),
+									$images
+								);
+							}
 							?>
 						</div>
 						<div style="display:flex; gap:6px; align-items:center; font-size:12px;">

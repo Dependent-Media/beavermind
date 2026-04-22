@@ -67,6 +67,7 @@ class DocsPage {
 				<li><a href="#inputs"><?php esc_html_e( 'Five ways to generate a page', 'beavermind' ); ?></a></li>
 				<li><a href="#variants"><?php esc_html_e( 'Variants', 'beavermind' ); ?></a></li>
 				<li><a href="#theming"><?php esc_html_e( 'Brand-aware theming', 'beavermind' ); ?></a></li>
+				<li><a href="#images"><?php esc_html_e( 'Image sourcing', 'beavermind' ); ?></a></li>
 				<li><a href="#refine"><?php esc_html_e( 'Refining an existing page', 'beavermind' ); ?></a></li>
 				<li><a href="#multipage"><?php esc_html_e( 'Multi-page generation', 'beavermind' ); ?></a></li>
 				<li><a href="#staging"><?php esc_html_e( 'Push to staging', 'beavermind' ); ?></a></li>
@@ -138,6 +139,17 @@ class DocsPage {
 			<p><?php esc_html_e( 'When the input is a URL, BeaverMind extracts brand signals from the source: site name, theme color (from <meta name="theme-color">), logo, OG image, and Google Font families. These get passed to Claude as soft hints.', 'beavermind' ); ?></p>
 			<p><?php esc_html_e( 'Claude returns a five-color theme — primary, bg_dark, bg_light, text_on_dark, text_on_light — that fragments adopt automatically. The result notice shows the chosen palette as inline color swatches so you can see what Claude picked at a glance.', 'beavermind' ); ?></p>
 
+			<h2 id="images"><?php esc_html_e( 'Image sourcing', 'beavermind' ); ?></h2>
+			<p><?php
+				printf(
+					wp_kses_post( __( 'Fragments with image slots (heroes, feature splits, logos) can be filled with free stock photos from <a href="%1$s" target="_blank" rel="noopener noreferrer">Pexels</a>. Paste a free Pexels API key into <a href="%2$s">Settings → Integrations</a> and every generation from that point on will replace empty / placeholder image URLs with contextually-relevant photos.', 'beavermind' ) ),
+					esc_url( 'https://www.pexels.com/api/' ),
+					esc_url( admin_url( 'admin.php?page=' . Settings::MENU_SLUG ) )
+				);
+			?></p>
+			<p><?php esc_html_e( 'Search queries are written by Claude Haiku in one batched call per generation — the brief turns into 2-4 word concrete queries ("team meeting laptop", "artisan bread bakery"). Results are cached for a day so 3-variant runs and similar briefs don\'t re-spend budget.', 'beavermind' ); ?></p>
+			<p><?php esc_html_e( 'Photographer credit is rendered in a small centered line in the page footer. Pexels\'s license doesn\'t legally require attribution — we give it anyway because it\'s the right thing to do.', 'beavermind' ); ?></p>
+
 			<h2 id="refine"><?php esc_html_e( 'Refining an existing page', 'beavermind' ); ?></h2>
 			<p><?php
 				printf(
@@ -206,6 +218,16 @@ class DocsPage {
 						?></td>
 					</tr>
 					<tr>
+						<td><strong><?php esc_html_e( 'Pexels API key', 'beavermind' ); ?></strong></td>
+						<td><?php esc_html_e( 'Optional', 'beavermind' ); ?></td>
+						<td><?php
+							printf(
+								wp_kses_post( __( 'When set, any empty or placeholder image slot in a generated page is filled with a free stock photo from <a href="%s" target="_blank" rel="noopener noreferrer">Pexels</a>. Photographer credit is rendered in the frontend footer. Free tier is 200 req/hour, 20k/month — more than enough for typical use.', 'beavermind' ) ),
+								esc_url( 'https://www.pexels.com/api/' )
+							);
+						?></td>
+					</tr>
+					<tr>
 						<td><strong><?php esc_html_e( 'Staging URL / Username / App Password', 'beavermind' ); ?></strong></td>
 						<td><?php esc_html_e( 'Only for Push to Staging', 'beavermind' ); ?></td>
 						<td><?php esc_html_e( 'Receiving site\'s URL and an admin user\'s WP Application Password (Users → Profile → Application Passwords on the staging site).', 'beavermind' ); ?></td>
@@ -263,6 +285,19 @@ class DocsPage {
 					<tr>
 						<td><?php esc_html_e( 'Push to staging fails with HTTP 401', 'beavermind' ); ?></td>
 						<td><?php esc_html_e( 'Application Password is wrong, or the staging user can\'t edit_pages. Generate a new app password on staging (Users → Profile → Application Passwords) and re-paste.', 'beavermind' ); ?></td>
+					</tr>
+					<tr>
+						<td><?php esc_html_e( 'Images are via.placeholder.com URLs', 'beavermind' ); ?></td>
+						<td><?php
+							printf(
+								wp_kses_post( __( 'No Pexels API key is set, so image slots fall back to placeholders. Set one in <a href="%s">Settings → Integrations</a>.', 'beavermind' ) ),
+								esc_url( admin_url( 'admin.php?page=' . Settings::MENU_SLUG ) )
+							);
+						?></td>
+					</tr>
+					<tr>
+						<td><?php esc_html_e( 'Image came back generic or off-topic', 'beavermind' ); ?></td>
+						<td><?php esc_html_e( 'Tighten the brief. Pexels search uses 2-4 word queries distilled by Haiku from the brief — if the brief is vague ("a landing page for a startup"), the queries will be generic. Name the product or the subject and Pexels gets better at picking a photo.', 'beavermind' ); ?></td>
 					</tr>
 				</tbody>
 			</table>

@@ -84,6 +84,14 @@ class Settings {
 		);
 
 		add_settings_field(
+			'pexels_api_key',
+			__( 'Pexels API key', 'beavermind' ),
+			array( $this, 'render_pexels_api_key_field' ),
+			self::MENU_SLUG,
+			'beavermind_integrations'
+		);
+
+		add_settings_field(
 			'staging_url',
 			__( 'Staging site URL', 'beavermind' ),
 			array( $this, 'render_staging_url_field' ),
@@ -170,10 +178,33 @@ class Settings {
 		}
 	}
 
+	public function render_pexels_api_key_field(): void {
+		$value  = (string) Plugin::instance()->get_option( 'pexels_api_key', '' );
+		$masked = $value ? str_repeat( '•', max( 0, strlen( $value ) - 4 ) ) . substr( $value, -4 ) : '';
+		printf(
+			'<input type="password" id="beavermind_pexels_api_key" name="%s[pexels_api_key]" value="%s" class="regular-text" autocomplete="off" />',
+			esc_attr( Plugin::OPTION_KEY ),
+			esc_attr( $value )
+		);
+		$link = sprintf(
+			'<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>',
+			esc_url( 'https://www.pexels.com/api/' ),
+			esc_html__( 'Pexels API', 'beavermind' )
+		);
+		echo '<p class="description">';
+		if ( $masked ) {
+			echo esc_html( sprintf( __( 'Currently set: %s', 'beavermind' ), $masked ) );
+			echo ' &middot; ';
+		}
+		printf( wp_kses_post( __( 'Optional. When set, image slots in generated pages get free stock photos instead of placeholders. Get a free key at %s (200 req/hour, 20k/month).', 'beavermind' ) ), $link );
+		echo '</p>';
+	}
+
 	public function sanitize( $input ): array {
 		$out = array();
 		$out['api_key']              = isset( $input['api_key'] ) ? trim( sanitize_text_field( $input['api_key'] ) ) : '';
 		$out['figma_token']          = isset( $input['figma_token'] ) ? trim( sanitize_text_field( $input['figma_token'] ) ) : '';
+		$out['pexels_api_key']       = isset( $input['pexels_api_key'] ) ? trim( sanitize_text_field( $input['pexels_api_key'] ) ) : '';
 		$out['staging_url']          = isset( $input['staging_url'] ) ? esc_url_raw( $input['staging_url'] ) : '';
 		$out['staging_username']     = isset( $input['staging_username'] ) ? sanitize_user( $input['staging_username'] ) : '';
 		$out['staging_app_password'] = isset( $input['staging_app_password'] ) ? trim( sanitize_text_field( $input['staging_app_password'] ) ) : '';
@@ -267,6 +298,7 @@ class Settings {
 		$this->render_check_row( 'Beaver Themer', class_exists( 'FLThemeBuilderLoader' ) );
 		$this->render_check_row( 'Ultimate Addons (UABB)', class_exists( 'BB_Ultimate_Addon' ) || defined( 'BB_ULTIMATE_ADDON_VER' ) );
 		$this->render_check_row( 'PowerPack', class_exists( 'BB_PowerPack' ) || defined( 'BB_POWERPACK_VER' ) );
+		$this->render_check_row( 'Pexels API key (optional)', '' !== trim( (string) Plugin::instance()->get_option( 'pexels_api_key', '' ) ) );
 		echo '</tbody></table>';
 	}
 

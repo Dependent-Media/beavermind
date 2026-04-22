@@ -178,7 +178,11 @@ class FigmaGenerator {
 				array( 'post_status' => $status )
 			),
 			$this->writer,
-			$this->fragments
+			$this->fragments,
+			array(
+				'image_filler' => Plugin::instance()->image_filler,
+				'brief'        => $effective_brief,
+			)
 		);
 		if ( empty( $run['results'] ) ) {
 			$store['error'] = 'All variants failed: ' . implode( ' · ', $run['errors'] );
