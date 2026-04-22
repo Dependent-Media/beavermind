@@ -68,4 +68,7 @@ echo
 echo "Built: $ZIP_PATH"
 ls -lh "$ZIP_PATH"
 echo "Contents (top level):"
-unzip -l "$ZIP_PATH" | awk 'NR>3 && NF>=4 {print "  " $4}' | sort -u | head -30
+# Materialize the full sorted listing first, then head it. Piping
+# `... | sort | head` with `set -o pipefail` SIGPIPEs sort and aborts.
+LISTING="$(unzip -l "$ZIP_PATH" | awk 'NR>3 && NF>=4 {print "  " $4}' | sort -u)"
+printf '%s\n' "$LISTING" | head -30
