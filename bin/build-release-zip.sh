@@ -67,8 +67,17 @@ zip -qr "$ZIP_PATH" beavermind
 echo
 echo "Built: $ZIP_PATH"
 ls -lh "$ZIP_PATH"
-echo "Contents (top level):"
-# Materialize the full sorted listing first, then head it. Piping
-# `... | sort | head` with `set -o pipefail` SIGPIPEs sort and aborts.
-LISTING="$(unzip -l "$ZIP_PATH" | awk 'NR>3 && NF>=4 {print "  " $4}' | sort -u)"
-printf '%s\n' "$LISTING" | head -30
+echo "Contents (top level inside beavermind/, deduped):"
+# Don't pipe through head with `set -o pipefail` — head closes the pipe
+# early and upstream commands get SIGPIPE → script exits 1 even though
+# the build succeeded. Emit the full deduped list (small, ~30 entries).
+# We strip the leading "beavermind/" wrapper and show the next path
+# component, which is the useful signal.
+unzip -l "$ZIP_PATH" \
+  | awk 'NR>3 && NF>=4 {
+      sub(/^beavermind\//, "", $4);
+      if ($4 == "") next;
+      split($4, p, "/");
+      print "  " p[1] (length(p) > 1 ? "/" : "");
+    }' \
+  | sort -u
