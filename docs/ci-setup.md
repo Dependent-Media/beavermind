@@ -53,9 +53,14 @@ ssh testbeavermind 'nano ~/.ssh/authorized_keys'
 ## What the E2E workflow does with these secrets
 
 1. Writes `~/.ssh/id_ed25519`, `~/.ssh/known_hosts`, and a matching `~/.ssh/config` entry aliased `testbeavermind`.
-2. Runs `tests/playwright/scripts/generate-auth-state.sh`, which SSHes to the webspace user and uses `wp-cli` to mint a 14-day WP auth cookie for the pre-created test user (`bm_playwright_test`).
-3. Stores the cookie as `tests/playwright/.auth/state.json` so Playwright can skip the WP login UI (which is brittle under WPS Hide Login + Limit Login Attempts + maintenance mode).
-4. Runs the Playwright spec. Videos, screenshots, and traces are uploaded as workflow artifacts (retained 14 days).
+2. **Rsyncs the PR's plugin code to `testbeavermind:httpdocs/wp-content/plugins/beavermind/`** so the test exercises the actual PR changes — not whatever was last manually deployed. Uses `--delete` so stale files don't survive. Excludes `_TestRunner/`, `dist/`, `.git/`, `.github/`, and Playwright's `node_modules` / `test-results` / `.auth` / `.env`.
+3. Runs `tests/playwright/scripts/generate-auth-state.sh`, which SSHes to the webspace user and uses `wp-cli` to mint a 14-day WP auth cookie for the pre-created test user (`bm_playwright_test`).
+4. Stores the cookie as `tests/playwright/.auth/state.json` so Playwright can skip the WP login UI (which is brittle under WPS Hide Login + Limit Login Attempts + maintenance mode).
+5. Runs the Playwright spec. Videos, screenshots, and traces are uploaded as workflow artifacts (retained 14 days).
+
+**Concurrency:** the workflow uses `concurrency: { group: e2e-testbeavermind }` so only one E2E run touches the site at a time. Concurrent PR runs queue rather than racing.
+
+**Fork safety:** the `pull_request` trigger doesn't expose secrets to forks (GitHub default), so a fork PR's E2E run will fail at the secret-validation step before any rsync to testbeavermind. Internal PRs (own repo) get full access and deploy as expected.
 
 ## Making the test site reachable from a different webspace
 
