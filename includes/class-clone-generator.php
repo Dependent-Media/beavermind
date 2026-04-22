@@ -58,7 +58,7 @@ class CloneGenerator {
 
 		$url_default      = $last['url'] ?? ( isset( $_GET['url'] ) ? esc_url_raw( wp_unslash( (string) $_GET['url'] ) ) : '' );
 		$hint_default     = $last['hint'] ?? '';
-		$variants_default = (int) ( $last['variants'] ?? 1 );
+		$variants_default = (int) ( $last['variants'] ?? 3 );
 		?>
 		<div class="wrap">
 			<h1><?php esc_html_e( 'BeaverMind — Clone from URL', 'beavermind' ); ?></h1>

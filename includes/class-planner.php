@@ -228,6 +228,67 @@ class Planner {
 	}
 
 	/**
+	 * Rewrite a user's prompt to be more specific and structured. Used by
+	 * the "Enhance Prompt" button in the admin UI. Always runs on Haiku
+	 * (regardless of the selected planning model) so the assist is cheap
+	 * and feels free.
+	 *
+	 * @return array{enhanced: string}|\WP_Error
+	 */
+	public function enhance_prompt( string $brief ) {
+		if ( ! $this->claude->is_configured() ) {
+			return new \WP_Error( 'beavermind_no_key', 'Claude API key is not configured.' );
+		}
+		$brief = trim( $brief );
+		if ( '' === $brief ) {
+			return new \WP_Error( 'beavermind_empty_brief', 'Prompt is empty — nothing to enhance.' );
+		}
+
+		$system = <<<SYS
+You are a writing coach for AI page-generation prompts. The user is going to feed their brief to a planner that picks layout fragments and writes copy.
+
+Your job: rewrite their brief into a tighter, more concrete one — a single, finished, ready-to-use brief. Keep their intent and voice; tighten phrasing; fill in plausible specifics where they're missing (audience, tone, primary CTA, key claims). When the input is vague, INVENT reasonable defaults rather than asking for clarification. If the brief is already good, make small improvements only.
+
+Hard rules:
+- Reply with ONLY the rewritten brief.
+- Plain prose. No markdown headings, no bullet lists, no fields, no fill-in-the-blank brackets.
+- Never ask the user a question.
+- Never say "[Specify X]" or "[fill in]" — invent the detail.
+- Length: 1 to 4 sentences, max ~80 words.
+- No preamble, no quotes, no explanation.
+SYS;
+
+		try {
+			$response = $this->claude->client()->messages->create(
+				model: 'claude-haiku-4-5-20251001',
+				maxTokens: 1024,
+				system: $system,
+				messages: array(
+					array( 'role' => 'user', 'content' => $brief ),
+				),
+			);
+		} catch ( \Anthropic\OverloadedError $e ) {
+			return new \WP_Error( 'beavermind_overloaded', 'Claude API is overloaded — try again in a moment.' );
+		} catch ( \Anthropic\APIError $e ) {
+			return new \WP_Error( 'beavermind_api_error', 'Claude API error: ' . $e->getMessage() );
+		} catch ( \Throwable $e ) {
+			return new \WP_Error( 'beavermind_unknown', 'Unexpected error: ' . $e->getMessage() );
+		}
+
+		$enhanced = '';
+		foreach ( $response->content as $block ) {
+			if ( isset( $block->type ) && $block->type === 'text' ) {
+				$enhanced .= $block->text;
+			}
+		}
+		$enhanced = trim( $enhanced );
+		if ( '' === $enhanced ) {
+			return new \WP_Error( 'beavermind_empty_response', 'Claude returned no text.' );
+		}
+		return array( 'enhanced' => $enhanced );
+	}
+
+	/**
 	 * Refine an existing BeaverMind-generated page: load its stored plan, ask
 	 * Claude to modify it per the user's instruction, and return the new plan.
 	 *

@@ -57,7 +57,7 @@ class ImageInputGenerator {
 		}
 
 		$brief_default    = (string) ( $last['brief'] ?? '' );
-		$variants_default = (int) ( $last['variants'] ?? 1 );
+		$variants_default = (int) ( $last['variants'] ?? 3 );
 		?>
 		<div class="wrap">
 			<h1><?php esc_html_e( 'BeaverMind — From Image', 'beavermind' ); ?></h1>
@@ -97,7 +97,10 @@ class ImageInputGenerator {
 							<th scope="row"><label for="bm_brief"><?php esc_html_e( 'Brief', 'beavermind' ); ?></label></th>
 							<td>
 								<textarea id="bm_brief" name="brief" rows="4" cols="80" class="large-text" placeholder="What's the page for? Who's the audience? Any tone or design direction?"><?php echo esc_textarea( $brief_default ); ?></textarea>
-								<p class="description"><?php esc_html_e( 'Optional but recommended. Without context Claude has to guess from the image alone.', 'beavermind' ); ?></p>
+								<p class="description" style="display:flex; align-items:center; gap:8px;">
+									<button type="button" class="button button-secondary" data-bm-enhance-target="bm_brief">✨ <?php esc_html_e( 'Enhance Prompt', 'beavermind' ); ?></button>
+									<span><?php esc_html_e( 'Optional but recommended. Without context Claude has to guess from the image alone.', 'beavermind' ); ?></span>
+								</p>
 							</td>
 						</tr>
 						<tr>
