@@ -26,11 +26,28 @@ class LayoutWriter {
 	/**
 	 * Apply a plan and return the resulting post ID (or WP_Error).
 	 *
+	 * @param array           $plan
+	 * @param FragmentLibrary $library
+	 * @param array{image_filler?: ImageFiller, brief?: string} $options
+	 *   Optional services + context. When `image_filler` is present we run the
+	 *   Pexels post-pass on the plan before applying it. When the plan already
+	 *   carries an `image_attributions` key (filler populated it earlier, or
+	 *   the REST endpoint received a prefilled plan), we persist that to post
+	 *   meta so the footer hook can render credits.
+	 *
 	 * @return int|\WP_Error
 	 */
-	public function apply_plan( array $plan, FragmentLibrary $library ) {
+	public function apply_plan( array $plan, FragmentLibrary $library, array $options = array() ) {
 		if ( ! class_exists( 'FLBuilderModel' ) ) {
 			return new \WP_Error( 'beavermind_no_bb', 'Beaver Builder is not active.' );
+		}
+
+		// Pexels post-pass: fills empty/placeholder image_url slots with real
+		// stock photos. No-op when the filler isn't configured.
+		$filler = $options['image_filler'] ?? null;
+		if ( $filler instanceof ImageFiller ) {
+			$brief_context = (string) ( $options['brief'] ?? '' );
+			$filler->fill( $plan, $brief_context );
 		}
 
 		$page = isset( $plan['page'] ) && is_array( $plan['page'] ) ? $plan['page'] : array();
@@ -91,9 +108,21 @@ class LayoutWriter {
 		// of the plan shape Claude produces.
 		$plan_to_store = $plan;
 		unset( $plan_to_store['usage'] );
+		// image_attributions stays in the stored plan so Push-to-Staging
+		// carries credits over — staging's LayoutWriter re-reads them onto
+		// its own _beavermind_image_attributions meta.
 		update_post_meta( $post_id, '_beavermind_plan', wp_json_encode( $plan_to_store ) );
 		update_post_meta( $post_id, '_beavermind_generated', 1 );
 		update_post_meta( $post_id, '_beavermind_generated_at', gmdate( 'c' ) );
+
+		// Image attributions from the Pexels post-pass (or prefilled on the
+		// plan). Kept as its own meta key so the footer hook can render without
+		// parsing the full plan JSON.
+		if ( ! empty( $plan['image_attributions'] ) && is_array( $plan['image_attributions'] ) ) {
+			update_post_meta( $post_id, '_beavermind_image_attributions', $plan['image_attributions'] );
+		} else {
+			delete_post_meta( $post_id, '_beavermind_image_attributions' );
+		}
 
 		return $post_id;
 	}

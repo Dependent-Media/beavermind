@@ -219,7 +219,10 @@ class MultipageGenerator {
 				$results[] = array( 'url' => $url, 'error' => 'plan: ' . $plan->get_error_message() );
 				continue;
 			}
-			$post_id = $this->writer->apply_plan( $plan, $this->fragments );
+			$post_id = $this->writer->apply_plan( $plan, $this->fragments, array(
+				'image_filler' => Plugin::instance()->image_filler,
+				'brief'        => trim( (string) ( $ref['brand']['site_name'] ?? '' ) . ' ' . $hint ) ?: $brief,
+			) );
 			if ( is_wp_error( $post_id ) ) {
 				$results[] = array( 'url' => $url, 'error' => 'write: ' . $post_id->get_error_message() );
 				continue;

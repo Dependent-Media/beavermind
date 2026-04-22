@@ -189,7 +189,11 @@ class ImageInputGenerator {
 			$variants,
 			fn() => $this->planner->plan_from_image( $bytes, $media_type, $brief, array( 'post_status' => $status ) ),
 			$this->writer,
-			$this->fragments
+			$this->fragments,
+			array(
+				'image_filler' => Plugin::instance()->image_filler,
+				'brief'        => $brief,
+			)
 		);
 		if ( empty( $run['results'] ) ) {
 			$store['error'] = 'All variants failed: ' . implode( ' · ', $run['errors'] );

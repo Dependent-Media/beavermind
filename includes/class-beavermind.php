@@ -16,6 +16,8 @@ final class Plugin {
 	public LayoutWriter $writer;
 	public ClaudeClient $claude;
 	public Planner $planner;
+	public PexelsClient $pexels;
+	public ?ImageFiller $image_filler = null;
 
 	public static function instance(): Plugin {
 		if ( null === self::$instance ) {
@@ -35,6 +37,12 @@ final class Plugin {
 			$this->fragments,
 			(string) $this->get_option( 'model', 'claude-opus-4-7' )
 		);
+		$this->pexels    = new PexelsClient( (string) $this->get_option( 'pexels_api_key', '' ) );
+		// Only wire the filler when Pexels is configured — saves the filler
+		// from being constructed-but-noop on every request.
+		if ( $this->pexels->is_configured() ) {
+			$this->image_filler = new ImageFiller( $this->pexels, $this->planner, $this->fragments );
+		}
 
 		$this->settings->register();
 		$this->fragments->register();
@@ -91,6 +99,10 @@ final class Plugin {
 		require_once BEAVERMIND_DIR . 'includes/class-docs-page.php';
 		( new DocsPage() )->register();
 
+		// Frontend credit line for Pexels-sourced images. Self-registers its
+		// wp_footer hook.
+		ImageAttributions::register();
+
 		// Admin JS for the Enhance Prompt button + Quick Refine actions.
 		// Loaded on every BeaverMind admin page (cheap; ~3KB), gated by a
 		// page-slug check inside the enqueue callback.
@@ -106,6 +118,9 @@ final class Plugin {
 		require_once BEAVERMIND_DIR . 'includes/class-planner.php';
 		require_once BEAVERMIND_DIR . 'includes/class-inline-fragments.php';
 		require_once BEAVERMIND_DIR . 'includes/class-plan-runner.php';
+		require_once BEAVERMIND_DIR . 'includes/class-pexels-client.php';
+		require_once BEAVERMIND_DIR . 'includes/class-image-filler.php';
+		require_once BEAVERMIND_DIR . 'includes/class-image-attributions.php';
 	}
 
 	public function get_option( string $key, $default = null ) {

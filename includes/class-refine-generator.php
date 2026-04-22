@@ -207,7 +207,10 @@ class RefineGenerator {
 			$this->stash_and_redirect( $user_id, $store );
 		}
 
-		$result = $this->writer->apply_plan( $plan, $this->fragments );
+		$result = $this->writer->apply_plan( $plan, $this->fragments, array(
+			'image_filler' => Plugin::instance()->image_filler,
+			'brief'        => $instruction,
+		) );
 		if ( is_wp_error( $result ) ) {
 			$store['error']     = 'Write failed: ' . $result->get_error_message();
 			$store['title']     = $plan['page']['title'] ?? '';

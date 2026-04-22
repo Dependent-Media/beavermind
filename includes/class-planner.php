@@ -289,6 +289,108 @@ SYS;
 	}
 
 	/**
+	 * Turn a set of image slots into Pexels search queries in one batched
+	 * Haiku call. ImageFiller calls this before hitting Pexels so every slot
+	 * gets a concrete 2-3-word query like "team meeting laptop" instead of a
+	 * fragment-category fallback.
+	 *
+	 * Always runs on Haiku — this is a helper call, not planning. Returns an
+	 * empty map on any failure so the caller falls back to its heuristic.
+	 *
+	 * @param string                 $brief_hint  Page brief or title.
+	 * @param array<string, array{fragment_id:string, url_slot:string, category:string}> $slots
+	 *
+	 * @return array<string, string>  Same keys as $slots, values = search query.
+	 */
+	public function generate_search_terms_for_slots( string $brief_hint, array $slots ): array {
+		if ( empty( $slots ) || ! $this->claude->is_configured() ) {
+			return array();
+		}
+
+		$lines = array();
+		foreach ( $slots as $key => $s ) {
+			$lines[] = sprintf(
+				'- id=%s · fragment=%s · slot=%s · section=%s',
+				$key,
+				(string) ( $s['fragment_id'] ?? '?' ),
+				(string) ( $s['url_slot'] ?? '?' ),
+				(string) ( $s['category'] ?? 'content' )
+			);
+		}
+
+		$system = <<<SYS
+You turn image slots on a generated web page into concrete stock-photo search queries for the Pexels API.
+
+Rules:
+- Return JSON: { "queries": [ { "id": "<the id>", "query": "<2-4 words>" } ] } with one entry per input slot.
+- Each query is 2 to 4 lowercase words, no punctuation, no filler ("photo of", "image").
+- The query should describe what's VISIBLE in the photo, not the abstract concept. Good: "team meeting laptop". Bad: "collaboration".
+- Use the brief hint to set the domain (SaaS → "office workspace", bakery → "artisan bread") but keep queries concrete.
+- Logos-fragment slots are low-priority; return something like "company logo" so Pexels returns a readable dud (we downgrade to placeholder if the fetch is weak).
+SYS;
+
+		$user_text = "Brief / page hint:\n$brief_hint\n\nImage slots to fill:\n" . implode( "\n", $lines );
+
+		try {
+			$response = $this->claude->client()->messages->create(
+				model: 'claude-haiku-4-5-20251001',
+				maxTokens: 1024,
+				system: $system,
+				messages: array(
+					array( 'role' => 'user', 'content' => $user_text ),
+				),
+				outputConfig: array(
+					'format' => array(
+						'type'   => 'json_schema',
+						'schema' => array(
+							'type'                 => 'object',
+							'additionalProperties' => false,
+							'required'             => array( 'queries' ),
+							'properties'           => array(
+								'queries' => array(
+									'type'  => 'array',
+									'items' => array(
+										'type'                 => 'object',
+										'additionalProperties' => false,
+										'required'             => array( 'id', 'query' ),
+										'properties'           => array(
+											'id'    => array( 'type' => 'string' ),
+											'query' => array( 'type' => 'string' ),
+										),
+									),
+								),
+							),
+						),
+					),
+				),
+			);
+		} catch ( \Throwable $e ) {
+			// Non-fatal — caller falls back to heuristic.
+			return array();
+		}
+
+		$text = '';
+		foreach ( $response->content as $block ) {
+			if ( isset( $block->type ) && $block->type === 'text' ) {
+				$text .= $block->text;
+			}
+		}
+		$decoded = json_decode( trim( $text ), true );
+		if ( ! is_array( $decoded ) || empty( $decoded['queries'] ) ) {
+			return array();
+		}
+
+		$out = array();
+		foreach ( (array) $decoded['queries'] as $pair ) {
+			if ( ! isset( $pair['id'], $pair['query'] ) ) {
+				continue;
+			}
+			$out[ (string) $pair['id'] ] = (string) $pair['query'];
+		}
+		return $out;
+	}
+
+	/**
 	 * Refine an existing BeaverMind-generated page: load its stored plan, ask
 	 * Claude to modify it per the user's instruction, and return the new plan.
 	 *
