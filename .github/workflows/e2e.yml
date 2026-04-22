@@ -3,19 +3,19 @@ name: E2E
 on:
   pull_request:
     branches: [main]
-    paths:
-      - 'beavermind.php'
-      - 'includes/**'
-      - 'library/**'
-      - 'composer.*'
-      - 'vendor/**'
-      - 'tests/playwright/**'
-      - 'tests/fixtures/**'
-      - '.github/workflows/e2e.yml'
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
+
+# Only one E2E run at a time — they all rsync to and exercise the same
+# testbeavermind site, so concurrent runs would race on the deployed code
+# and on test-page IDs. Don't cancel in progress; let each finish cleanly.
+concurrency:
+  group: e2e-testbeavermind
+  cancel-in-progress: false
 
 jobs:
   playwright:
@@ -89,6 +89,28 @@ jobs:
           EOF
           chmod 600 ~/.ssh/config
           ssh -o BatchMode=yes testbeavermind 'echo "ssh ok: $(whoami)@$(hostname)"'
+
+      - name: Sync this PR's plugin code to testbeavermind
+        # rsync excludes match build-release-zip.sh's logic: ship plugin source
+        # + library + vendor + bin (utility scripts the smoke tests use) +
+        # docs (referenced from the in-admin Docs page). Skip the macOS
+        # TestRunner, Playwright project state, .git, .github, dist.
+        # --delete keeps testbeavermind's plugin slot in sync with the PR
+        # exactly — stale files don't survive a rebase.
+        working-directory: ${{ github.workspace }}
+        run: |
+          rsync -az --delete \
+            --exclude='/.git/' \
+            --exclude='/.github/' \
+            --exclude='/_TestRunner/' \
+            --exclude='/dist/' \
+            --exclude='/tests/playwright/node_modules/' \
+            --exclude='/tests/playwright/test-results/' \
+            --exclude='/tests/playwright/playwright-report/' \
+            --exclude='/tests/playwright/.auth/' \
+            --exclude='/tests/playwright/.env' \
+            --exclude='**/.DS_Store' \
+            ./ testbeavermind:httpdocs/wp-content/plugins/beavermind/
 
       - name: Generate Playwright auth state
         env:
