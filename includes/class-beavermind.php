@@ -87,6 +87,9 @@ final class Plugin {
 
 		require_once BEAVERMIND_DIR . 'includes/class-staging-pusher.php';
 		( new StagingPusher() )->register();
+
+		require_once BEAVERMIND_DIR . 'includes/class-docs-page.php';
+		( new DocsPage() )->register();
 	}
 
 	private function load_dependencies(): void {
