@@ -78,7 +78,7 @@ class PlanRunner {
 			return;
 		}
 		?>
-		<div class="notice notice-success">
+		<div class="notice notice-success" data-testid="bm-success">
 			<p><strong><?php
 			printf(
 				/* translators: %d: number of variants generated */
@@ -87,17 +87,19 @@ class PlanRunner {
 			);
 			?></strong></p>
 			<ol>
-				<?php foreach ( $results as $v ) : ?>
+				<?php foreach ( $results as $i => $v ) : ?>
+					<?php
+					// Tag the FIRST result's links with the testids the
+					// Playwright clone spec asserts on. Multi-variant runs
+					// still use the same tags on the first link — Playwright
+					// only needs to find one valid edit link.
+					$edit_attr = ( 0 === $i ) ? ' data-testid="bm-edit-link"' : '';
+					$bb_attr   = ( 0 === $i ) ? ' data-testid="bm-bb-link"'   : '';
+					?>
 					<li>
-						<?php
-						printf(
-							wp_kses_post( __( '<a href="%1$s" target="_blank">page #%2$d</a> — <em>%3$s</em> — <a href="%4$s" target="_blank">edit with Beaver Builder</a>', 'beavermind' ) ),
-							esc_url( get_edit_post_link( (int) $v['post_id'] ) ),
-							(int) $v['post_id'],
-							esc_html( $v['title'] ?? '(untitled)' ),
-							esc_url( add_query_arg( 'fl_builder', '', get_permalink( (int) $v['post_id'] ) ) )
-						);
-						?>
+						<a href="<?php echo esc_url( get_edit_post_link( (int) $v['post_id'] ) ); ?>" target="_blank"<?php echo $edit_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>page #<?php echo (int) $v['post_id']; ?></a>
+						— <em><?php echo esc_html( $v['title'] ?? '(untitled)' ); ?></em>
+						— <a href="<?php echo esc_url( add_query_arg( 'fl_builder', '', get_permalink( (int) $v['post_id'] ) ) ); ?>" target="_blank"<?php echo $bb_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>edit with Beaver Builder</a>
 						&nbsp;<small style="color:#666;">[<?php echo esc_html( implode( ', ', array_column( (array) ( $v['fragments'] ?? array() ), 'id' ) ) ); ?>]</small>
 						<?php if ( ! empty( $v['theme']['colors'] ) ) : ?>
 							&nbsp;<?php self::render_theme_swatches( (array) $v['theme']['colors'] ); ?>
