@@ -141,6 +141,14 @@ class CloneGenerator {
 			<p><strong><?php esc_html_e( 'Title:', 'beavermind' ); ?></strong> <?php echo esc_html( $last['title'] ?? '' ); ?></p>
 			<p><strong><?php esc_html_e( 'Source title:', 'beavermind' ); ?></strong> <?php echo esc_html( $last['source_title'] ?? '' ); ?></p>
 			<p><strong><?php esc_html_e( 'Source sections extracted:', 'beavermind' ); ?></strong> <?php echo (int) ( $last['source_sections'] ?? 0 ); ?></p>
+			<?php if ( ! empty( $last['source_theme_color'] ) ) : ?>
+				<p><strong><?php esc_html_e( 'Extracted brand color:', 'beavermind' ); ?></strong>
+				<span style="display:inline-block;width:14px;height:14px;background:#<?php echo esc_attr( $last['source_theme_color'] ); ?>;border:1px solid rgba(0,0,0,0.15);vertical-align:middle;margin:0 4px;"></span>
+				<code>#<?php echo esc_html( $last['source_theme_color'] ); ?></code>
+				<?php if ( ! empty( $last['source_theme_color_source'] ) ) : ?>
+					<span style="color:#646970;font-size:12px;">(<?php echo esc_html( $last['source_theme_color_source'] ); ?>)</span>
+				<?php endif; ?></p>
+			<?php endif; ?>
 			<ol>
 				<?php foreach ( (array) ( $last['fragments'] ?? array() ) as $f ) : ?>
 					<li>
@@ -197,6 +205,11 @@ class CloneGenerator {
 		}
 		$store['source_title']    = $ref['title'] ?? '';
 		$store['source_sections'] = count( (array) ( $ref['sections'] ?? array() ) );
+		// Surface what extract_brand found so the notice can show "picked
+		// orange from a button-inline style" and users can tell whether the
+		// color came from meta, CSS, or the frequency fallback.
+		$store['source_theme_color']        = $ref['brand']['theme_color']        ?? null;
+		$store['source_theme_color_source'] = $ref['brand']['theme_color_source'] ?? null;
 
 		// Step 1b: opportunistically fetch the OG image so Claude gets BOTH
 		// the structural HTML and a visual anchor (hybrid URL+vision).

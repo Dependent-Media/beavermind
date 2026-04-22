@@ -166,18 +166,31 @@ class SiteCloner {
 	}
 
 	/**
-	 * Sniff brand signals from <meta>, <link>, and likely-logo <img> elements.
+	 * Sniff brand signals from <meta>, <link>, CSS, and likely-logo <img> elements.
 	 * All values are best-effort — Claude treats them as hints, not requirements.
 	 *
-	 * @return array{site_name:string, theme_color:?string, logo_url:?string, og_image:?string, fonts:array<int,string>}
+	 * theme_color detection cascades through five sources (in priority order):
+	 *   1. `<meta name="theme-color">`
+	 *   2. Inline `style=""` on buttons / CTA-class anchors
+	 *   3. CSS custom properties (`--primary`, `--brand`, etc.) in inline `<style>`
+	 *      or same-origin stylesheets
+	 *   4. Button-selector rules in the same CSS sources
+	 *   5. Most-frequent non-neutral hex color across the collected CSS
+	 *
+	 * `theme_color_source` is a debug string tagging which tier produced the
+	 * final value — surfaced in the admin notice so users can see where the
+	 * color came from.
+	 *
+	 * @return array{site_name:string, theme_color:?string, theme_color_source:?string, logo_url:?string, og_image:?string, fonts:array<int,string>}
 	 */
 	private function extract_brand( \DOMDocument $dom, string $base_url ): array {
 		$brand = array(
-			'site_name'   => '',
-			'theme_color' => null,
-			'logo_url'    => null,
-			'og_image'    => null,
-			'fonts'       => array(),
+			'site_name'          => '',
+			'theme_color'        => null,
+			'theme_color_source' => null,
+			'logo_url'           => null,
+			'og_image'           => null,
+			'fonts'              => array(),
 		);
 
 		// Meta tags: theme-color, og:site_name, og:image.
@@ -189,11 +202,37 @@ class SiteCloner {
 				continue;
 			}
 			if ( 'theme-color' === $name && null === $brand['theme_color'] ) {
-				$brand['theme_color'] = $this->normalize_color( $content );
+				$color = $this->normalize_color( $content );
+				if ( null !== $color ) {
+					$brand['theme_color']        = $color;
+					$brand['theme_color_source'] = 'meta';
+				}
 			} elseif ( 'og:site_name' === $prop && '' === $brand['site_name'] ) {
 				$brand['site_name'] = $content;
 			} elseif ( 'og:image' === $prop && null === $brand['og_image'] ) {
 				$brand['og_image'] = $this->absolutize( $content, $base_url );
+			}
+		}
+
+		// Fall back through the CSS tiers if <meta name="theme-color"> didn't
+		// cover it. Runs ordered priority — each tier returns null when it has
+		// nothing to say and passes to the next.
+		if ( null === $brand['theme_color'] ) {
+			$from_inline_attr = $this->theme_color_from_inline_button_styles( $dom );
+			if ( null !== $from_inline_attr ) {
+				$brand['theme_color']        = $from_inline_attr;
+				$brand['theme_color_source'] = 'button-inline';
+			}
+		}
+
+		if ( null === $brand['theme_color'] ) {
+			$css = $this->collect_css( $dom, $base_url );
+			if ( '' !== $css ) {
+				$found = $this->theme_color_from_css( $css );
+				if ( null !== $found ) {
+					$brand['theme_color']        = $found['hex'];
+					$brand['theme_color_source'] = $found['source'];
+				}
 			}
 		}
 
@@ -249,12 +288,236 @@ class SiteCloner {
 	}
 
 	/**
+	 * Walk likely-button elements for an inline `style="background:#..."` and
+	 * return the first non-neutral hex we find. Fastest signal — no network,
+	 * no CSS parsing; works well on Tailwind / utility-class sites that inject
+	 * inline styles, and on handcoded sites that happen to inline button
+	 * colors.
+	 *
+	 * Candidates are `<button>` elements and anchors with "btn" / "button" /
+	 * "cta" in their class.
+	 */
+	private function theme_color_from_inline_button_styles( \DOMDocument $dom ): ?string {
+		$candidates = array();
+		foreach ( $dom->getElementsByTagName( 'button' ) as $el ) {
+			$candidates[] = $el;
+		}
+		foreach ( $dom->getElementsByTagName( 'a' ) as $a ) {
+			$class = strtolower( (string) $a->getAttribute( 'class' ) );
+			if ( str_contains( $class, 'btn' ) || str_contains( $class, 'button' ) || str_contains( $class, 'cta' ) ) {
+				$candidates[] = $a;
+			}
+		}
+		foreach ( $candidates as $el ) {
+			$style = (string) $el->getAttribute( 'style' );
+			if ( '' === $style ) {
+				continue;
+			}
+			if ( preg_match( '/background(?:-color)?\s*:\s*(#[0-9a-fA-F]{3,8})/i', $style, $m ) ) {
+				$hex = $this->normalize_color( $m[1] );
+				if ( null !== $hex && ! $this->is_neutral_color( $hex ) ) {
+					return $hex;
+				}
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Gather all CSS we can reach cheaply: inline `<style>` tags concatenated
+	 * with up to two same-origin stylesheets (budget-capped at 500KB each).
+	 * Cross-origin stylesheets are skipped to avoid burning time on Google
+	 * Fonts, Cloudflare, analytics CSS, etc.
+	 *
+	 * Failures (timeouts, non-2xx, unreadable bodies) are silent — CSS
+	 * collection is an optional enrichment, not a required step. A `null`
+	 * from any fetch just means that source didn't contribute.
+	 */
+	private function collect_css( \DOMDocument $dom, string $base_url ): string {
+		$blobs = array();
+
+		foreach ( $dom->getElementsByTagName( 'style' ) as $style ) {
+			$text = (string) $style->textContent;
+			if ( '' !== $text ) {
+				$blobs[] = $text;
+			}
+		}
+
+		// External stylesheets — same-origin only, first two visible <link>s.
+		// Doing this after inline <style> so the order in the concatenated
+		// blob mirrors cascade order (which helps the frequency fallback
+		// weigh head-of-document critical CSS more heavily).
+		$base_parts = wp_parse_url( $base_url );
+		$base_host  = isset( $base_parts['host'] ) ? strtolower( (string) $base_parts['host'] ) : '';
+		if ( '' !== $base_host ) {
+			$fetched = 0;
+			foreach ( $dom->getElementsByTagName( 'link' ) as $link ) {
+				if ( $fetched >= 2 ) {
+					break;
+				}
+				$rel = strtolower( (string) $link->getAttribute( 'rel' ) );
+				if ( 'stylesheet' !== $rel ) {
+					continue;
+				}
+				$href = (string) $link->getAttribute( 'href' );
+				if ( '' === $href ) {
+					continue;
+				}
+				$abs = $this->absolutize( $href, $base_url );
+				$url_parts = wp_parse_url( $abs );
+				$host = isset( $url_parts['host'] ) ? strtolower( (string) $url_parts['host'] ) : '';
+				if ( $host !== $base_host ) {
+					continue;
+				}
+				// Skip obvious non-theme stylesheets. Google Fonts never carries
+				// brand colors; wp-emoji / dashicons / block-library are from
+				// WordPress itself. Saves a pointless round-trip.
+				if ( preg_match( '#(?:/wp-emoji|/dashicons|/block-library|/admin-bar|googleapis\.com|gstatic\.com|cloudflare\.com)#i', $abs ) ) {
+					continue;
+				}
+				$css = $this->fetch_stylesheet( $abs );
+				if ( null !== $css ) {
+					$blobs[]   = $css;
+					$fetched++;
+				}
+			}
+		}
+
+		return implode( "\n", $blobs );
+	}
+
+	private function fetch_stylesheet( string $url ): ?string {
+		$resp = wp_remote_get( $url, array(
+			'timeout'     => 8,
+			'redirection' => 3,
+			'user-agent'  => 'BeaverMind/0.1 (+https://dependentmedia.com/beavermind)',
+			'headers'     => array( 'Accept' => 'text/css,*/*;q=0.1' ),
+		) );
+		if ( is_wp_error( $resp ) ) {
+			return null;
+		}
+		$status = wp_remote_retrieve_response_code( $resp );
+		if ( $status < 200 || $status >= 300 ) {
+			return null;
+		}
+		$body = (string) wp_remote_retrieve_body( $resp );
+		if ( strlen( $body ) > 500_000 ) {
+			$body = substr( $body, 0, 500_000 );
+		}
+		return $body;
+	}
+
+	/**
+	 * Apply a three-tier search to a CSS text blob and return the best hex
+	 * candidate alongside a source tag describing WHICH tier picked it.
+	 *
+	 * Tiers, in priority order:
+	 *   - css-var:  `--primary: #f97316` and its common aliases
+	 *   - button-rule: `.btn-primary { background: #f97316 }` and variants
+	 *   - frequency: most-repeated non-neutral hex (min 3 occurrences)
+	 *
+	 * Each tier filters out grayscale / near-black / near-white so the fallback
+	 * doesn't latch onto neutral body text or container backgrounds.
+	 *
+	 * @return array{hex: string, source: string}|null
+	 */
+	private function theme_color_from_css( string $css ): ?array {
+		// Tier 1: CSS custom properties named primary / brand / accent / theme.
+		// Also catches `--wp--preset--color--primary` (WordPress block editor)
+		// and the bare `--color-primary` convention.
+		$css_var_pattern = '/--(?:primary|brand(?:[-_](?:primary|color))?|accent(?:[-_]color)?|color[-_]primary|primary[-_]color|theme[-_]color|wp--preset--color--(?:primary|brand|accent))\s*:\s*(#[0-9a-fA-F]{3,8})/i';
+		if ( preg_match_all( $css_var_pattern, $css, $m ) ) {
+			foreach ( $m[1] as $hex ) {
+				$norm = $this->normalize_color( $hex );
+				if ( null !== $norm && ! $this->is_neutral_color( $norm ) ) {
+					return array( 'hex' => $norm, 'source' => 'css-var' );
+				}
+			}
+		}
+
+		// Tier 2: button-selector rules with an explicit background color.
+		// Matches `.btn`, `.btn-primary`, `.button`, `.wp-block-button__link`,
+		// and bare `button` — with or without modifiers before the opening
+		// brace. Lazy `[^{}]*` keeps us inside the same rule block.
+		$btn_pattern = '/(?:^|[\s,{}>])(?:\.btn(?:[-_][a-z0-9]+)?|\.button(?:[-_][a-z0-9]+)?|\.wp-block-button__link|button)\b[^{}]*\{[^{}]*background(?:-color)?\s*:\s*(#[0-9a-fA-F]{3,8})/i';
+		if ( preg_match_all( $btn_pattern, $css, $m ) ) {
+			foreach ( $m[1] as $hex ) {
+				$norm = $this->normalize_color( $hex );
+				if ( null !== $norm && ! $this->is_neutral_color( $norm ) ) {
+					return array( 'hex' => $norm, 'source' => 'button-rule' );
+				}
+			}
+		}
+
+		// Tier 3: frequency. Walk every `#xxx` / `#xxxxxx` hex and return the
+		// most common non-neutral with 3+ hits. Avoids one-off accent colors
+		// (e.g. a single highlight border) masquerading as the brand.
+		if ( preg_match_all( '/#([0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?)\b/', $css, $m ) ) {
+			$counts = array();
+			foreach ( $m[1] as $hex ) {
+				$norm = $this->normalize_color( '#' . $hex );
+				if ( null !== $norm && ! $this->is_neutral_color( $norm ) ) {
+					$counts[ $norm ] = ( $counts[ $norm ] ?? 0 ) + 1;
+				}
+			}
+			if ( ! empty( $counts ) ) {
+				arsort( $counts );
+				foreach ( $counts as $hex => $count ) {
+					if ( $count >= 3 ) {
+						return array( 'hex' => $hex, 'source' => 'css-frequency' );
+					}
+				}
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Heuristic neutral filter. Rejects grays (low saturation), near-blacks,
+	 * and near-whites so the frequency fallback doesn't surface container
+	 * background colors or body text as the "brand".
+	 *
+	 * Input must be a 6-digit lowercase hex without the leading #.
+	 */
+	private function is_neutral_color( string $hex ): bool {
+		if ( 1 !== preg_match( '/^[0-9a-f]{6}$/', $hex ) ) {
+			return true;
+		}
+		$r = hexdec( substr( $hex, 0, 2 ) );
+		$g = hexdec( substr( $hex, 2, 2 ) );
+		$b = hexdec( substr( $hex, 4, 2 ) );
+
+		$max = max( $r, $g, $b );
+		$min = min( $r, $g, $b );
+
+		// Low channel spread = gray / black / white. Threshold of 30 tolerates
+		// near-neutrals like #333 (range 0) but cuts muted slate colors (range
+		// ~20) that rarely function as brand primaries.
+		if ( ( $max - $min ) < 30 ) {
+			return true;
+		}
+
+		// Clip extremes — colors under #191919 or over #e6e6e6 luminosity are
+		// almost always container chrome, not brand accents.
+		$lum = ( $max + $min ) / 2;
+		if ( $lum < 25 || $lum > 230 ) {
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
 	 * Normalize a CSS color value to a 6-digit hex without leading #.
 	 * Returns null if we can't recognize it (e.g. rgb(), hsl(), keywords).
+	 *
+	 * Accepts 3, 6, or 8-digit hex forms. 8-digit (RGBA) drops the alpha
+	 * channel — we only need the visible color for fragment theming.
 	 */
 	private function normalize_color( string $value ): ?string {
 		$value = trim( $value );
-		if ( preg_match( '/^#?([0-9a-f]{6})$/i', $value, $m ) ) {
+		if ( preg_match( '/^#?([0-9a-f]{6})(?:[0-9a-f]{2})?$/i', $value, $m ) ) {
 			return strtolower( $m[1] );
 		}
 		if ( preg_match( '/^#?([0-9a-f]{3})$/i', $value, $m ) ) {
@@ -286,7 +549,8 @@ class SiteCloner {
 			$brand_lines[] = '- site_name: ' . $brand['site_name'];
 		}
 		if ( ! empty( $brand['theme_color'] ) ) {
-			$brand_lines[] = '- theme_color: #' . $brand['theme_color'];
+			$src = ! empty( $brand['theme_color_source'] ) ? ' (from ' . $brand['theme_color_source'] . ')' : '';
+			$brand_lines[] = '- theme_color: #' . $brand['theme_color'] . $src;
 		}
 		if ( ! empty( $brand['logo_url'] ) ) {
 			$brand_lines[] = '- logo_url: ' . $brand['logo_url'];
