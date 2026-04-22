@@ -447,8 +447,9 @@ selecting fragments from a curated library and filling each fragment's content
 slots with copy that fits the user's brief.
 
 Rules:
-1. Pick 2 to 6 fragments. Use a hero-style fragment first if the brief implies
-   a landing page. End with a CTA banner if the brief implies driving action.
+1. Pick 3 to 8 fragments. Use a hero-style fragment near the top if the brief
+   implies a landing page. End with a CTA banner if the brief implies driving
+   action.
 2. Use each fragment AT MOST ONCE per page unless the brief clearly calls for
    repetition (e.g. "two pricing tiers").
 3. Only use slot names that are listed under the fragment you chose. Unknown
@@ -468,7 +469,19 @@ Rules:
    as soft hints. Refer to the product by `site_name` in headings/CTAs.
    If `logo_url` is present and you're picking a logos fragment, you may use
    it as one of the logo slots.
-9. Theme colors: optionally include a `theme.colors` object in your output
+9. Structural parity: when the reference has a site nav, include `nav-header`
+   as the FIRST fragment. When it has a visible footer with link columns,
+   include `footer-4col` as the LAST fragment. These are structural — include
+   them even when the brief doesn't name them.
+10. Capacity-matching: count the items in the source before picking a fragment.
+    If the source shows 9 feature cards, use `feature-grid-9`, NOT
+    `feature-grid-3col` — do not compress. If the source shows 3 pricing
+    tiers but you only have a 2-plan table, it's OK to drop the weakest tier
+    rather than cram.
+11. Pricing: when the source shows comparable plans side-by-side, always use
+    `pricing-table-2up` (structured cards with price, features list, CTA).
+    Never render pricing as plain two-column text.
+12. Theme colors: optionally include a `theme.colors` object in your output
    to override the fragments' default colors. Keys (all optional):
    - `primary`        — main brand color, used for CTA button backgrounds
    - `bg_dark`        — dark section backgrounds (CTA banner)
@@ -504,6 +517,14 @@ PROMPT;
 			$lines[] = '';
 			$lines[] = 'Slots:';
 			$lines[] = implode( "\n", $slot_lines );
+			// Expose which theme keys this fragment responds to so Claude can
+			// emit an appropriately-keyed `theme.colors` object. Without this,
+			// the planner has no way to know that cta-banner honors `bg_dark`
+			// while feature-grid-3col doesn't.
+			$theme_keys = array_keys( (array) ( $meta['theme_bindings'] ?? array() ) );
+			if ( ! empty( $theme_keys ) ) {
+				$lines[] = 'Theme keys: ' . implode( ', ', $theme_keys );
+			}
 			$lines[] = '';
 		}
 		return implode( "\n", $lines );
