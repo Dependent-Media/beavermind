@@ -77,36 +77,52 @@ class PlanRunner {
 		if ( empty( $results ) ) {
 			return;
 		}
+		// CSS-grid gallery for multi-variant runs (matches Elementor's "pick
+		// one of N" pattern). Single-variant runs collapse to one full-width
+		// card so the layout is consistent. Cards lead with the theme
+		// swatches and fragment count so visual differences pop at a glance.
+		$count = count( $results );
 		?>
-		<div class="notice notice-success" data-testid="bm-success">
-			<p><strong><?php
+		<div class="notice notice-success" data-testid="bm-success" style="padding: 12px 16px;">
+			<p style="margin: 0 0 12px 0;"><strong><?php
 			printf(
 				/* translators: %d: number of variants generated */
-				esc_html( _n( 'Generated %d page:', 'Generated %d pages:', count( $results ), 'beavermind' ) ),
-				count( $results )
+				esc_html( _n( 'Generated %d page — pick one to keep working in:', 'Generated %d variants — compare and pick one to keep working in:', $count, 'beavermind' ) ),
+				$count
 			);
 			?></strong></p>
-			<ol>
+			<div style="display:grid; grid-template-columns: repeat(<?php echo (int) min( 3, max( 1, $count ) ); ?>, minmax(0, 1fr)); gap: 12px; max-width: 1080px;">
 				<?php foreach ( $results as $i => $v ) : ?>
 					<?php
-					// Tag the FIRST result's links with the testids the
-					// Playwright clone spec asserts on. Multi-variant runs
-					// still use the same tags on the first link — Playwright
-					// only needs to find one valid edit link.
 					$edit_attr = ( 0 === $i ) ? ' data-testid="bm-edit-link"' : '';
 					$bb_attr   = ( 0 === $i ) ? ' data-testid="bm-bb-link"'   : '';
+					$fragments = array_column( (array) ( $v['fragments'] ?? array() ), 'id' );
 					?>
-					<li>
-						<a href="<?php echo esc_url( get_edit_post_link( (int) $v['post_id'] ) ); ?>" target="_blank"<?php echo $edit_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>page #<?php echo (int) $v['post_id']; ?></a>
-						— <em><?php echo esc_html( $v['title'] ?? '(untitled)' ); ?></em>
-						— <a href="<?php echo esc_url( add_query_arg( 'fl_builder', '', get_permalink( (int) $v['post_id'] ) ) ); ?>" target="_blank"<?php echo $bb_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>edit with Beaver Builder</a>
-						&nbsp;<small style="color:#666;">[<?php echo esc_html( implode( ', ', array_column( (array) ( $v['fragments'] ?? array() ), 'id' ) ) ); ?>]</small>
+					<div class="bm-variant-card" style="border:1px solid #c3c4c7; border-radius:6px; padding:12px 14px; background:#fff;">
 						<?php if ( ! empty( $v['theme']['colors'] ) ) : ?>
-							&nbsp;<?php self::render_theme_swatches( (array) $v['theme']['colors'] ); ?>
+							<div style="margin-bottom:8px;"><?php self::render_theme_swatches( (array) $v['theme']['colors'] ); ?></div>
 						<?php endif; ?>
-					</li>
+						<div style="font-weight:600; font-size:13px; line-height:1.35; margin-bottom:6px;">
+							<?php echo esc_html( $v['title'] ?? '(untitled)' ); ?>
+						</div>
+						<div style="font-size:11px; color:#646970; margin-bottom:10px;">
+							<?php
+							printf(
+								/* translators: 1: count, 2: comma-separated fragment IDs */
+								esc_html__( '%1$d fragments: %2$s', 'beavermind' ),
+								count( $fragments ),
+								esc_html( implode( ', ', $fragments ) )
+							);
+							?>
+						</div>
+						<div style="display:flex; gap:6px; align-items:center; font-size:12px;">
+							<a class="button button-primary button-small" href="<?php echo esc_url( add_query_arg( 'fl_builder', '', get_permalink( (int) $v['post_id'] ) ) ); ?>" target="_blank"<?php echo $bb_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php esc_html_e( 'Edit in BB', 'beavermind' ); ?></a>
+							<a class="button button-small" href="<?php echo esc_url( get_edit_post_link( (int) $v['post_id'] ) ); ?>" target="_blank"<?php echo $edit_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php esc_html_e( 'Edit in WP', 'beavermind' ); ?></a>
+							<span style="color:#8c8f94; margin-left:auto;">#<?php echo (int) $v['post_id']; ?></span>
+						</div>
+					</div>
 				<?php endforeach; ?>
-			</ol>
+			</div>
 		</div>
 		<?php
 	}

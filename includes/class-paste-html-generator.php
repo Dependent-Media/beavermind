@@ -62,7 +62,7 @@ class PasteHTMLGenerator {
 		$html_default     = (string) ( $last['html'] ?? '' );
 		$base_default     = (string) ( $last['base_url'] ?? '' );
 		$hint_default     = (string) ( $last['hint'] ?? '' );
-		$variants_default = (int) ( $last['variants'] ?? 1 );
+		$variants_default = (int) ( $last['variants'] ?? 3 );
 		?>
 		<div class="wrap">
 			<h1><?php esc_html_e( 'BeaverMind — Paste HTML', 'beavermind' ); ?></h1>

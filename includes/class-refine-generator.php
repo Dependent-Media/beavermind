@@ -109,7 +109,9 @@ class RefineGenerator {
 							<tr>
 								<th scope="row"><label for="bm_instruction"><?php esc_html_e( 'Change', 'beavermind' ); ?></label></th>
 								<td>
+									<?php $this->render_quick_actions(); ?>
 									<textarea id="bm_instruction" name="instruction" rows="4" cols="80" class="large-text" data-testid="bm-refine-instruction" placeholder="e.g. Make the hero more playful. Add a testimonials section. Drop the FAQ. Use a warmer tone." required><?php echo esc_textarea( $instr_def ); ?></textarea>
+									<p class="description"><?php esc_html_e( 'Quick actions append to the textarea — stack several together (e.g. "Make shorter" + "More playful") in one refinement run.', 'beavermind' ); ?></p>
 								</td>
 							</tr>
 						</tbody>
@@ -118,6 +120,40 @@ class RefineGenerator {
 					<?php submit_button( __( 'Refine Page', 'beavermind' ), 'primary', 'submit', true, array( 'data-testid' => 'bm-refine-submit' ) ); ?>
 				</form>
 			<?php endif; ?>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Render the Quick Refine action button row above the instruction
+	 * textarea. Each button is wired in admin.js (data-bm-template-target +
+	 * data-bm-template) to APPEND its template text to the textarea, so
+	 * users can stack actions ("Make shorter" + "More playful") in one
+	 * refinement.
+	 *
+	 * Templates are intentionally short imperative phrases — they read as
+	 * natural-language brief additions, not slot fills.
+	 */
+	private function render_quick_actions(): void {
+		$actions = array(
+			__( 'Make shorter', 'beavermind' )       => 'Tighten the page: shorten body copy ~30% and drop one fragment if there\'s a clear least-important section.',
+			__( 'Make bolder', 'beavermind' )        => 'Make the hero bolder — punchier headline, stronger CTA verb, more confident voice throughout.',
+			__( 'More playful', 'beavermind' )       => 'Use a warmer, more playful tone. Looser sentences, a bit of personality. Keep it professional.',
+			__( 'More professional', 'beavermind' )  => 'Tighten the voice to feel more buttoned-up and credible. Drop colloquialisms; lead with concrete claims.',
+			__( 'Add testimonial', 'beavermind' )    => 'Add a testimonial-single fragment after the hero with a plausible customer quote.',
+			__( 'Add FAQ', 'beavermind' )            => 'Add a faq-list-4 fragment near the bottom answering the obvious objections.',
+			__( 'Drop FAQ', 'beavermind' )           => 'Remove the FAQ section.',
+			__( 'Hero with image', 'beavermind' )    => 'Swap the current hero for hero-with-image; keep the same copy and CTA.',
+		);
+		?>
+		<div style="margin-bottom: 8px; display:flex; flex-wrap:wrap; gap:6px;">
+			<?php foreach ( $actions as $label => $template ) : ?>
+				<button type="button"
+				        class="button button-small"
+				        data-bm-template-target="bm_instruction"
+				        data-bm-template="<?php echo esc_attr( $template ); ?>"
+				        title="<?php echo esc_attr( $template ); ?>"><?php echo esc_html( $label ); ?></button>
+			<?php endforeach; ?>
 		</div>
 		<?php
 	}

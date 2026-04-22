@@ -27,10 +27,12 @@ class RestAPI {
 
 	private LayoutWriter $writer;
 	private FragmentLibrary $fragments;
+	private Planner $planner;
 
-	public function __construct( LayoutWriter $writer, FragmentLibrary $fragments ) {
+	public function __construct( LayoutWriter $writer, FragmentLibrary $fragments, Planner $planner ) {
 		$this->writer    = $writer;
 		$this->fragments = $fragments;
+		$this->planner   = $planner;
 	}
 
 	public function register(): void {
@@ -69,6 +71,35 @@ class RestAPI {
 				'permission_callback' => array( $this, 'can_edit_pages' ),
 			)
 		);
+
+		register_rest_route(
+			self::NAMESPACE_VERSION,
+			'/enhance-prompt',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'enhance_prompt' ),
+				'permission_callback' => array( $this, 'can_edit_pages' ),
+				'args'                => array(
+					'prompt' => array(
+						'type'     => 'string',
+						'required' => true,
+					),
+				),
+			)
+		);
+	}
+
+	/**
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public function enhance_prompt( \WP_REST_Request $request ) {
+		$prompt = (string) $request->get_param( 'prompt' );
+		$result = $this->planner->enhance_prompt( $prompt );
+		if ( is_wp_error( $result ) ) {
+			$result->add_data( array( 'status' => 400 ) );
+			return $result;
+		}
+		return rest_ensure_response( $result );
 	}
 
 	public function can_edit_pages(): bool {

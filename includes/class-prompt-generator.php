@@ -59,7 +59,10 @@ class PromptGenerator {
 		}
 
 		$brief_default    = isset( $_GET['brief'] ) ? wp_unslash( (string) $_GET['brief'] ) : ( $last['brief'] ?? '' );
-		$variants_default = (int) ( $last['variants'] ?? 1 );
+		// Default to 3 variants — matches the Elementor "always show 3 to
+		// pick from" pattern. Users still get the single-shot path by
+		// dropping the count to 1.
+		$variants_default = (int) ( $last['variants'] ?? 3 );
 		$catalog          = $this->fragments->catalog();
 		?>
 		<div class="wrap">
@@ -89,7 +92,10 @@ class PromptGenerator {
 							<th scope="row"><label for="bm_brief"><?php esc_html_e( 'Page brief', 'beavermind' ); ?></label></th>
 							<td>
 								<textarea id="bm_brief" name="brief" rows="6" cols="80" class="large-text code" placeholder="e.g. A landing page for an AI-powered project management app aimed at design agencies. Highlight speed, integrations with Figma, and team collaboration features."><?php echo esc_textarea( $brief_default ); ?></textarea>
-								<p class="description"><?php esc_html_e( 'Describe the audience, the offering, and what the page should achieve. Specifics produce better copy.', 'beavermind' ); ?></p>
+								<p class="description" style="display:flex; align-items:center; gap:8px;">
+									<button type="button" class="button button-secondary" data-bm-enhance-target="bm_brief">✨ <?php esc_html_e( 'Enhance Prompt', 'beavermind' ); ?></button>
+									<span><?php esc_html_e( 'Describe the audience, the offering, and what the page should achieve. Specifics produce better copy. Click Enhance to let Claude tighten and structure your prompt (free, runs on Haiku).', 'beavermind' ); ?></span>
+								</p>
 							</td>
 						</tr>
 						<tr>

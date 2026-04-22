@@ -58,7 +58,7 @@ class FigmaGenerator {
 
 		$url_default      = (string) ( $last['url'] ?? '' );
 		$brief_default    = (string) ( $last['brief'] ?? '' );
-		$variants_default = (int) ( $last['variants'] ?? 1 );
+		$variants_default = (int) ( $last['variants'] ?? 3 );
 		$has_token        = '' !== trim( (string) Plugin::instance()->get_option( 'figma_token', '' ) );
 		?>
 		<div class="wrap">
@@ -104,6 +104,9 @@ class FigmaGenerator {
 							<th scope="row"><label for="bm_brief"><?php esc_html_e( 'Brief', 'beavermind' ); ?></label></th>
 							<td>
 								<textarea id="bm_brief" name="brief" rows="4" cols="80" class="large-text" placeholder="What's the page for? Who's the audience? Any tone or design direction?" <?php disabled( ! $has_token ); ?>><?php echo esc_textarea( $brief_default ); ?></textarea>
+								<p class="description" style="display:flex; align-items:center; gap:8px;">
+									<button type="button" class="button button-secondary" data-bm-enhance-target="bm_brief" <?php disabled( ! $has_token ); ?>>✨ <?php esc_html_e( 'Enhance Prompt', 'beavermind' ); ?></button>
+								</p>
 							</td>
 						</tr>
 						<tr>

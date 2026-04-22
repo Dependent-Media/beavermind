@@ -41,6 +41,11 @@ test.describe('BeaverMind clone-from-URL', () => {
       await page.getByTestId('bm-url-input').fill(REFERENCE_URL);
       await page.getByTestId('bm-hint-input').fill(DESIGN_HINT);
       await page.getByTestId('bm-status-select').selectOption('publish');
+      // Force 1 variant so we exercise the single-page render path with
+      // its plan summary (`bm-plan-summary`). The form's default is now 3
+      // variants (matches the Elementor "always show 3" UX) which renders
+      // a gallery instead of the summary; that's tested separately.
+      await page.locator('#bm_variants').selectOption('1');
       await page.screenshot({ path: 'test-results/02-form-filled.png', fullPage: true });
       // `noWaitAfter: true` because the submit triggers admin-post.php which
       // calls Claude (10-40s) before redirecting back. The default click
